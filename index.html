@@ -35,6 +35,11 @@
   --ghost:#4a5853; --eq:#5d6d67; --eqfill:#222c28; --accent:#41c495; --accent-soft:#16332a; --on-accent:#08130f;
   --over:#f5a524; --over-soft:#3a2a10; --done:#6f7d78; color-scheme:dark}
 *{box-sizing:border-box}
+html{-webkit-tap-highlight-color:transparent}
+button,input,select,label,a,summary{touch-action:manipulation}
+/* Cartões fora da tela não são desenhados até chegar perto: rolagem mais leve */
+.card{content-visibility:auto;contain-intrinsic-size:auto 620px}
+.timer{contain:layout paint;transform:translateZ(0)}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-block:16px calc(150px + env(safe-area-inset-bottom,0px))}
@@ -159,14 +164,14 @@ td.pos{color:var(--accent);font-weight:700} td.neg{color:var(--over);font-weight
 .tsub{font-size:.8rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tbig{font-family:var(--display);font-weight:700;font-size:2.9rem;line-height:1;font-variant-numeric:tabular-nums;min-width:3.2ch;text-align:right}
 .tbar{height:5px;border-radius:3px;background:var(--line);margin-top:6px;overflow:hidden}
-.tbar i{display:block;height:100%;background:var(--accent);width:0}
+.tbar i{display:block;height:100%;background:var(--accent);width:100%;transform:scaleX(0);transform-origin:left center;will-change:transform}
 .tbtns{display:flex;flex-direction:column;gap:5px}
 .tbtns button{border:1px solid var(--line);background:var(--bg);border-radius:8px;padding:5px 10px;font-size:.78rem;font-weight:700}
 .timer.over{background:var(--over-soft);border-top-color:var(--over)}
 .timer.over .tlabel,.timer.over .tbig{color:var(--over)}
 .timer.idle .tbig{color:var(--muted);font-size:1.6rem}
 .timer.idle .tlabel{color:var(--muted)}
-@media (prefers-reduced-motion: no-preference){.arr{animation:dash 1.2s linear infinite}@keyframes dash{to{stroke-dashoffset:-18}}
+@media (prefers-reduced-motion: no-preference){
   .timer.over .tbig{animation:pulse 1s ease-in-out infinite}@keyframes pulse{50%{opacity:.55}}}
 /* desenho */
 .limb{fill:none;stroke:currentColor;stroke-width:5;stroke-linecap:round;stroke-linejoin:round}
@@ -198,6 +203,7 @@ td.pos{color:var(--accent);font-weight:700} td.neg{color:var(--over);font-weight
     <div class="tbtns" id="tBtns" hidden><button type="button" id="tPlus">+15 s</button><button type="button" id="tSkip">Pular</button></div>
   </div>
 </div>
+
 <script>
 const mir=p=>[200-p[0],p[1]];
 const pts=a=>a.map(q=>q.join(',')).join(' ');
@@ -608,18 +614,21 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 function startTimer(sec,label,sub){S.timer={end:Date.now()+sec*1000,dur:sec,label,sub,beeped:false};keepAwake();save();tick()}
 function stopTimer(){S.timer=null;save();tick()}
 const $=id=>document.getElementById(id);
+// Só mexe na tela quando algo mudou (deixa a rolagem leve).
+const _t={};
+function put(id,v,prop='textContent'){const k=id+prop;if(_t[k]===v)return;_t[k]=v;const el=$(id);if(el)el[prop]=v}
 function tick(){
-  const t=S.timer,box=$('timer'),pr=S.prog[S.view],sc=$('sessClock');
-  if(sc){if(pr&&pr.start){const el=(Date.now()-pr.start)/1000;sc.textContent='Treino '+fmt(el)+' / 55:00';sc.classList.toggle('late',el>55*60)}else sc.textContent='Treino 0:00 / 55:00'}
-  if(!t){box.className='timer idle';$('tLabel').textContent='Cronômetro';$('tSub').textContent='Terminou uma série? Toque no ✓ dela para o descanso começar.';$('tBig').textContent='--:--';$('tBar').style.width='0';$('tBtns').hidden=true;return}
-  $('tBtns').hidden=false;
+  const t=S.timer,pr=S.prog[S.view],sc=$('sessClock');
+  if(sc){const el=pr&&pr.start?(Date.now()-pr.start)/1000:0,txt='Treino '+fmt(el)+' / 55:00';if(sc.textContent!==txt)sc.textContent=txt;const late=el>55*60;if(sc.classList.contains('late')!==late)sc.classList.toggle('late',late)}
+  if(!t){put('timer','timer idle','className');put('tLabel','Cronômetro');put('tSub','Terminou uma série? Toque no ✓ dela para o descanso começar.');put('tBig','--:--');if(_t.bar!=='scaleX(0)'){_t.bar='scaleX(0)';$('tBar').style.transform='scaleX(0)'}put('tBtns',true,'hidden');return}
+  put('tBtns',false,'hidden');
   const rem=(t.end-Date.now())/1000;
-  if(rem>0){box.className='timer';$('tLabel').textContent=t.label;$('tSub').textContent=t.sub;$('tBig').textContent=fmt(Math.ceil(rem));
-    $('tBar').style.width=(100*(1-rem/t.dur)).toFixed(1)+'%';$('tSkip').textContent='Pular'}
+  if(rem>0){put('timer','timer','className');put('tLabel',t.label);put('tSub',t.sub);put('tBig',fmt(Math.ceil(rem)));
+    const tf='scaleX('+Math.min(1,Math.max(0,1-rem/t.dur)).toFixed(3)+')';if(_t.bar!==tf){_t.bar=tf;$('tBar').style.transform=tf}put('tSkip','Pular')}
   else{if(!t.beeped){t.beeped=true;save();beep()}
-    box.className='timer over';$('tLabel').textContent='Passou do descanso';$('tSub').textContent=t.sub;$('tBig').textContent='+'+fmt(-rem);$('tBar').style.width='100%';$('tSkip').textContent='Parar'}
+    put('timer','timer over','className');put('tLabel','Passou do descanso');put('tSub',t.sub);put('tBig','+'+fmt(-rem));if(_t.bar!=='scaleX(1)'){_t.bar='scaleX(1)';$('tBar').style.transform='scaleX(1)'}put('tSkip','Parar')}
 }
-setInterval(tick,250);
+setInterval(()=>{if(document.visibilityState==='visible')tick()},250);
 $('tPlus').onclick=()=>{if(S.timer){const now=Date.now();if(S.timer.end<now){S.timer.end=now;S.timer.dur=0}S.timer.end+=15000;S.timer.dur+=15;S.timer.beeped=false;save();tick()}};
 $('tSkip').onclick=stopTimer;
 
@@ -646,6 +655,7 @@ function tapSet(d,i,s){
   save();render();
   if(n+1>=it.sets&&p.cur>=0){const el=$('ex-'+i);el&&el.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'})}
 }
+function renderCard(d,i){const el=$('ex-'+i);if(el)el.outerHTML=card(d,i);else render()}
 function finish(d){S.hist.push({d:d.id,date:today()});S.hist=S.hist.slice(-80);touch();delete S.prog[d.id];stopTimer();
   if(d.kind==='gym')S.view=nextGym();save();render();window.scrollTo({top:0})}
 
@@ -807,6 +817,7 @@ function render(){
   const nx=nextGym();
   tabsEl.innerHTML=[...DAYS.map(d=>({id:d.id,t:d.tab,s:'≈ '+estMin(d)+' min'})),{id:'G',t:'Guia',s:'evolução'}].map(t=>`<button type="button" class="tab" role="tab" id="tab-${t.id}" data-id="${t.id}" aria-selected="${S.view===t.id}">${t.t}<small>${t.id===nx?'<span class="nx">próximo</span>':t.s}</small></button>`).join('');
   content.innerHTML=S.view==='G'?guideHTML():dayHTML(dayById(S.view));
+  for(const k in _t)delete _t[k];
   $('soundBtn').textContent='Som: '+(S.sound?'ligado':'desligado');
   tick();
 }
@@ -830,12 +841,12 @@ content.addEventListener('click',e=>{
     const st=f==='r'?(isSec(d.items[i].reps)?5:1):STEP(key);
     const cur=curVal(d,f,i,s);const nv=Math.max(0,Math.round(((cur===''?0:+cur)+sign*st)*100)/100);
     setVal(d,f,i,s,nv);
-    if(f==='w')render();else{const inp=$(`${f}-${i}-${s}`);inp&&(inp.value=kg(nv))}
+    if(f==='w')renderCard(d,i);else{const inp=$(`${f}-${i}-${s}`);inp&&(inp.value=kg(nv))}
     return;
   }
   if(act==='stall+'||act==='stall-'){S.stallN=STALL()+(act==='stall+'?1:-1);S.stallN=STALL();touch();render();return}
-  if(act==='swap'){P_(d.id).vars[i]=b.dataset.k;delete P_(d.id).w[i];save();render();return}
-  if(act==='usew'){const p=P_(d.id);p.w[i]=p.w[i]||{};p.w[i][s]=+b.dataset.w;save();render();return}
+  if(act==='swap'){P_(d.id).vars[i]=b.dataset.k;delete P_(d.id).w[i];save();renderCard(d,i);return}
+  if(act==='usew'){const p=P_(d.id);p.w[i]=p.w[i]||{};p.w[i][s]=+b.dataset.w;save();renderCard(d,i);return}
   if(act==='set')tapSet(d,i,s);
   else if(act==='cur'){P_(d.id).cur=i;save();render();$('ex-'+i).scrollIntoView({block:'start'})}
   else if(act==='warm'){const p=P_(d.id);if(!p.start)p.start=Date.now();p.warm=true;startTimer(300,'Aquecimento','Bike ou esteira leve; depois 1 série leve do 1º exercício');render()}
@@ -849,10 +860,10 @@ content.addEventListener('click',e=>{
 });
 content.addEventListener('change',e=>{
   const t=e.target,d=dayById(S.view);if(!d)return;
-  if(t.matches('select[data-act=var]')){if(P_(d.id).sets[+t.dataset.i])return;P_(d.id).vars[+t.dataset.i]=t.value;const p=P_(d.id);delete p.w[+t.dataset.i];save();render();return}
+  if(t.matches('select[data-act=var]')){if(P_(d.id).sets[+t.dataset.i])return;P_(d.id).vars[+t.dataset.i]=t.value;const p=P_(d.id);delete p.w[+t.dataset.i];save();renderCard(d,+t.dataset.i);return}
   if(t.matches('input[data-act]')){const f=t.dataset.act,i=+t.dataset.i,s=+t.dataset.s,v=num(t.value);
     setVal(d,f,i,s,v);
-    if(f==='w')render();else t.value=kg(v)}
+    if(f==='w')renderCard(d,i);else t.value=kg(v)}
 });
 content.addEventListener('focusin',e=>{if(e.target.matches('input[data-act]'))setTimeout(()=>{try{e.target.select()}catch(_){}},0)});
 // ---- conta Claude (histórico) e backup em arquivo ----
@@ -895,6 +906,7 @@ document.addEventListener('change',e=>{if(e.target.id!=='importFile')return;cons
     S.exlog=o.exlog;S.hist=Array.isArray(o.hist)?o.hist:[];S.varCount=o.varCount&&typeof o.varCount==='object'?o.varCount:{};if(o.stallN)S.stallN=+o.stallN;touch();render();$('bkMsg').textContent='Backup restaurado.'}catch(_){msg&&(msg.textContent='Esse arquivo não é um backup deste app.')}};rd.readAsText(f)});
 
 render();
+
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
 </script>
 </body>

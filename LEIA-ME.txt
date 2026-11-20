@@ -29,7 +29,7 @@ Passar os dados que você já tem
   No app instalado: aba Guia > Backup > "Restaurar de arquivo".
 
 Atualizar o app no futuro
-  Substitua os arquivos na hospedagem e, no sw.js, troque VERSION = 'treino-v1' por 'treino-v2'.
+  Substitua os arquivos na hospedagem e, no sw.js, aumente o número em VERSION (ex.: de 'treino-v2' para 'treino-v3').
   O celular baixa a nova versão na próxima vez que abrir o app com internet.
 
 Play Store (futuro)
