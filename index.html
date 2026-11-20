@@ -127,6 +127,7 @@ details.tips ul{margin-top:6px}
 .ev.up{border-left-color:var(--accent)} .ev.down{border-left-color:var(--over)}
 .ev.up b{color:var(--accent)} .ev.down b{color:var(--over)}
 .ev.swap{border-left-color:var(--accent);background:var(--accent-soft)} .ev.swap b{color:var(--accent)}
+.swaps{display:flex;flex-wrap:wrap;gap:6px;margin-top:7px}.swaps .vbtn{background:var(--surface)}
 .evsets{color:var(--muted);font-size:.78rem;margin-top:3px;font-variant-numeric:tabular-nums}
 .basew{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;font-weight:700;font-size:.88rem}
 .rows{display:flex;flex-direction:column;gap:6px}
@@ -491,13 +492,35 @@ EX.roscaAlt={...EX.roscaHal,n:'Rosca Alternada (halteres)',q:'rosca alternada ha
   t:['Um halter em cada mão, cotovelos colados ao corpo.','Suba um braço de cada vez, girando a palma para cima.','Sem balançar o tronco.']};
 EX.rosca.n='Rosca Direta (barra)';
 EX.adutora.n='Cadeira Adutora';
+
+// ---- variações extras ----
+EX.pulleySup={...EX.pulley,n:'Puxada com Pegada Supinada',q:'puxada frente pegada supinada execução',
+  t:['Segure a barra com as palmas viradas para você, mãos na largura dos ombros.','Puxe até o alto do peito, levando os cotovelos para baixo e para trás.','Trabalha as costas e um pouco mais o bíceps. Suba controlando.']};
+EX.arnold={...EX.desenvHal,n:'Desenvolvimento Arnold',q:'desenvolvimento arnold halteres execução',
+  t:['Sentado, halteres na frente do rosto com as palmas viradas para você.','Ao subir, gire as mãos até as palmas ficarem para a frente.','Desça fazendo o caminho inverso. Use menos carga que no desenvolvimento comum.']};
+EX.elevSent={...EX.elev,n:'Elevação Lateral Sentado',q:'elevação lateral sentado halteres execução',eq:seatF,
+  a:P([100,40],[...torsoF(55,96),...legsFSeat,...armsF(55,[82,74],[82,92])],D(82,96)+D(118,96)),
+  b:P([100,40],[...torsoF(55,96),...legsFSeat,...armsF(55,[64,58],[44,60])],D(42,60)+D(158,60)),
+  arr:[A(70,104,34,70,40,102),A(130,104,166,70,160,102)],
+  t:['Sentado, costas retas, halteres ao lado do corpo.','Suba os braços para os lados até a altura dos ombros.','Sentado fica mais difícil roubar no balanço. Carga leve.']};
+EX.crucInvHal={n:'Crucifixo Inverso com Halteres',q:'crucifixo inverso halteres inclinado execução',eq:ground,
+  // visto de frente, com o tronco inclinado (por isso a cabeça baixa e o tronco curto)
+  a:P([100,66],[[[84,62],[116,62]],[[100,62],[100,92]],[[92,92],[108,92]],[[92,92],[84,116],[88,140]],[[108,92],[116,116],[112,140]],[[84,62],[86,82],[88,102]],[[116,62],[114,82],[112,102]]],D(88,106,90)+D(112,106,90)),
+  b:P([100,66],[[[84,62],[116,62]],[[100,62],[100,92]],[[92,92],[108,92]],[[92,92],[84,116],[88,140]],[[108,92],[116,116],[112,140]],[[84,62],[64,62],[44,64]],[[116,62],[136,62],[156,64]]],D(42,66,90)+D(158,66,90)),
+  arr:[A(78,112,38,76,46,108),A(122,112,162,76,154,108)],
+  t:['Tronco inclinado para a frente, costas retas, um halter em cada mão (desenho visto de frente).','Abra os braços para os lados, cotovelos levemente dobrados, até a altura dos ombros.','Carga bem leve; foco no ombro de trás.']};
+EX.elevPerna={n:'Elevação de Pernas (deitado)',q:'elevação de pernas deitado abdominal execução',eq:ground,
+  a:P([40,126],[[[52,134],[100,136]],[[100,136],[140,134],[178,134]],[[52,134],[90,140]]]),
+  b:P([40,126],[[[52,134],[100,136]],[[100,136],[110,100],[112,62]],[[52,134],[90,140]]]),
+  arr:[A(170,120,124,58,164,70)],
+  t:['Deitado, mãos ao lado do corpo ou embaixo do quadril.','Suba as pernas esticadas até apontarem para o teto, sem dar impulso.','Desça devagar sem encostar no chão. Lombar sempre apoiada.']};
 // ---- treinos ----
 // Alternativas para quando o aparelho estiver ocupado (a 1ª da lista do cartão é a principal)
-const ALT={legpress:['hack','legpressAlto','goblet'],stiff:['flexora','legpressAlto'],
- supino:['supHal','peck','flexao'],supinc:['supHal','supino','peck','cruciHal'],pulley:['serrote'],remada:['cavalinho','serrote','remCurvHal'],
- desenv:['desenvHal'],elev:['elevCabo'],crucinv:['facepull'],
- tricorda:['tripulley','triFrances','triTesta'],rosca:['roscaAlt','roscaHal'],martelo:['roscaHal','rosca'],
- abd:['abdChao'],agachLivre:['afundo']};
+const ALT={legpress:['hack','legpressAlto','goblet'],stiff:['flexora','legpressAlto','ponte'],
+ supino:['supHal','peck','flexao'],supinc:['supHal','supino','peck','cruciHal'],pulley:['pulleySup','serrote','remada'],remada:['cavalinho','serrote','remCurvHal'],
+ desenv:['desenvHal','arnold'],elev:['elevCabo','elevSent'],crucinv:['facepull','crucInvHal'],
+ tricorda:['tripulley','triFrances','triTesta'],rosca:['roscaAlt','roscaHal','martelo'],martelo:['roscaHal','rosca'],
+ abd:['abdChao','elevPerna'],agachLivre:['afundo']};
 const X=(ex,sets,reps,rest)=>({ex,sets,reps,rest});
 // Treino A e B alternados, com prioridade para a parte de cima (ombro, costas, peito, braço, antebraço, abdômen).
 // Pernas: 1 exercício grande por dia, para manter e continuar evoluindo sem atrapalhar a caminhada.
@@ -518,17 +541,17 @@ const ROT=['A','B'];
 const START={abd:70,supino:30,peck:60,remada:50,pulley:50,cavalinho:24,rosca:7,roscaAlt:9,roscaHal:9,martelo:9,legpress:140,legpressAlto:140,hack:80,
  extensora:55,flexora:40,pant:55,elev:8,desenv:24,tricorda:40,tripulley:40,triFrances:17.5,cruciHal:12.5};
 // Degrau de carga: halteres 1 kg; máquinas de anilha 2 kg (trocar anilha de 4 por 5 de cada lado); máquinas de pino e polias 5 kg.
-const DUMB=['elev','supinc','supHal','cruciHal','serrote','remCurvHal','desenvHal','triFrances','triTesta','roscaHal','martelo','roscaAlt','goblet','afundo','stiff','pantDegrau','rosca'];
+const DUMB=['elev','supinc','supHal','cruciHal','serrote','remCurvHal','desenvHal','triFrances','triTesta','roscaHal','martelo','roscaAlt','goblet','afundo','stiff','pantDegrau','rosca','arnold','elevSent','crucInvHal'];
 const PLATE=['legpress','legpressAlto','hack','supino','desenv','cavalinho'];
 const STEP=k=>DUMB.includes(k)?1:PLATE.includes(k)?2:5;
 // Aumento sugerido: cerca de 5% da carga, arredondado ao degrau (no mínimo 1 degrau).
 const INC=(k,w)=>{const st=STEP(k);return Math.max(st,Math.round(w*0.05/st)*st)};
 // Exercícios só com o peso do corpo (sem campo de carga)
-const BW=['flexao','prancha','agachLivre','ponte','abdChao'];
+const BW=['flexao','prancha','agachLivre','ponte','abdChao','elevPerna'];
 // Até onde ir em cada série
 const FAIL={
  legpress:'2-3',legpressAlto:'2-3',hack:'2-3',goblet:'2-3',afundo:'2-3',stiff:'2-3',cavalinho:'2-3',remCurvHal:'2-3',
- supHal:'1-2',supinc:'1-2',cruciHal:'1-2',desenvHal:'1-2',triFrances:'1-2',triTesta:'1-2',serrote:'1-2'};
+ supHal:'1-2',arnold:'1-2',supinc:'1-2',cruciHal:'1-2',desenvHal:'1-2',triFrances:'1-2',triTesta:'1-2',serrote:'1-2'};
 const FAILTXT={
  'sim':['Falha na última série','Exercício seguro para ir até a falha na última série. Nas anteriores, pare 1 repetição antes.'],
  '1-2':['Pare 1–2 antes da falha','Halter perto do rosto ou do peito sem ajudante: falhar no meio da repetição é arriscado.'],
@@ -661,7 +684,7 @@ function finish(d){S.hist.push({d:d.id,date:today()});S.hist=S.hist.slice(-80);t
 
 // ---- sugestão de troca ----
 // Tipo de movimento de cada exercício, para checar o equilíbrio da semana.
-const TAG={supino:'chestPress',supHal:'chestPress',supinc:'chestPress',flexao:'chestPress',peck:'chestFly',cruciHal:'chestFly',
+const TAG={pulleySup:'vPull',supino:'chestPress',supHal:'chestPress',supinc:'chestPress',flexao:'chestPress',peck:'chestFly',cruciHal:'chestFly',
  pulley:'vPull',serrote:'row',remada:'row',cavalinho:'row',remCurvHal:'row',stiff:'hinge',flexora:'hamIso',legpressAlto:'quad',legpress:'quad',hack:'quad',goblet:'quad'};
 // Movimentos que precisam aparecer pelo menos 1 vez em 7 dias.
 const NEED={
@@ -680,13 +703,18 @@ function stallAdvice(n){const sem=(n/2).toLocaleString('pt-BR');
   if(n<=4)return ['ok',`Bom. Cada exercício aparece 2 vezes por semana, então isso dá cerca de ${sem} semanas sem evoluir antes do aviso.`];
   if(n===5)return ['mid',`Um pouco alto: cerca de ${sem} semanas sem evoluir antes do aviso. Recomendado: 3 a 4.`];
   return ['high',`Alto. Você ficaria cerca de ${sem} semanas parado no mesmo exercício antes do aviso. Recomendado: 3 a 4.`]}
+// Devolve até 3 opções da lista do cartão, da melhor para a pior, e o motivo.
 function advise(d,i){
   if(d.kind!=='gym')return null;
-  const o=optsOf(d)(i),cur=exKey(d,i),since=daysAgo(6);
-  for(const need in NEED){const cand=o.find(k=>TAG[k]===need);
-    if(cand&&TAG[cur]!==need&&!didTag(need,since))return {to:cand,why:NEED[need]}}
-  if(stalled(cur,d.id)){const alt=o.find(k=>k!==cur&&TAG[k]&&TAG[k]===TAG[cur]&&!stalled(k,d.id))||o.find(k=>k!==cur&&!stalled(k,d.id));
-    if(alt)return {to:alt,why:`${STALL()} treinos seguidos sem evoluir em ${EX[cur].n}. Trocar por algumas semanas ajuda a voltar a progredir.`}}
+  const o=optsOf(d)(i),cur=exKey(d,i),since=daysAgo(6),others=o.filter(k=>k!==cur);
+  for(const need in NEED){
+    if(TAG[cur]===need||didTag(need,since))continue;
+    const c=others.filter(k=>TAG[k]===need);
+    if(c.length)return {to:c.slice(0,3),why:NEED[need]}}
+  if(stalled(cur,d.id)){
+    const fresh=others.filter(k=>!stalled(k,d.id));
+    const c=[...fresh.filter(k=>TAG[k]&&TAG[k]===TAG[cur]),...fresh.filter(k=>!(TAG[k]&&TAG[k]===TAG[cur]))].slice(0,3);
+    if(c.length)return {to:c,why:`${STALL()} treinos seguidos sem evoluir em ${EX[cur].n}. Trocar por algumas semanas ajuda a voltar a progredir.`}}
   return null;
 }
 
@@ -710,8 +738,8 @@ function card(d,i){
   }
   h+=svg(key);
   const adv=!n?advise(d,i):null;
-  if(adv)h+=`<div class="ev swap"><b>↻ Troque hoje por ${EX[adv.to].n}.</b> ${adv.why} <button type="button" class="linkbtn" data-act="swap" data-i="${i}" data-k="${adv.to}">Trocar</button></div>`;
-  if(opts.length>1)h+=`<label class="varsel"><span>Aparelho ocupado? Trocar por:</span><select data-act="var" data-i="${i}" id="var-${d.id}-${i}" ${n?'disabled title="Já começou este exercício"':''}>${opts.map((o,j)=>`<option value="${o}" ${o===key?'selected':''}>${EX[o].n}${o===pref?' ★ preferido':''}${adv&&o===adv.to?' ↻ sugerido hoje':''}</option>`).join('')}</select></label>`;
+  if(adv)h+=`<div class="ev swap"><b>↻ Troque hoje.</b> ${adv.why}<div class="swaps">${adv.to.map((k,j)=>`<button type="button" class="vbtn" data-act="swap" data-i="${i}" data-k="${k}">${j===0?'<b>Melhor:</b> ':''}${EX[k].n}</button>`).join('')}</div></div>`;
+  if(opts.length>1)h+=`<label class="varsel"><span>Aparelho ocupado? Trocar por:</span><select data-act="var" data-i="${i}" id="var-${d.id}-${i}" ${n?'disabled title="Já começou este exercício"':''}>${opts.map((o,j)=>`<option value="${o}" ${o===key?'selected':''}>${EX[o].n}${o===pref?' ★ preferido':''}${adv&&adv.to.includes(o)?' ↻ sugerido hoje':''}</option>`).join('')}</select></label>`;
   if(!bw&&n>0&&n<it.sets){const r0=+(p.r[i]?.[n-1]??mn),w0=wAt(p,i,n-1,key,d.id);
     if(w0!==''&&(r0>=mx+3||r0<=mn-3)){const up=r0>=mx+3,nw=estW(key,+w0,r0,up?(mn+mx)/2:mn+1),cur=wAt(p,i,n,key,d.id);
       if(+cur!==nw)h+=`<div class="ev ${up?'up':'down'}"><b>${up?'⬆ Repetições demais':'⬇ Poucas repetições'}</b> na série ${n} (${r0}; faixa ${mn}–${mx}). Na próxima série, tente cerca de ${kg(nw)} kg. <button type="button" class="linkbtn" data-act="usew" data-i="${i}" data-s="${n}" data-w="${nw}">Usar ${kg(nw)} kg</button></div>`}}
