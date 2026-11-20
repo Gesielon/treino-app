@@ -1,0 +1,47 @@
+TREINO A/B — APP PARA INSTALAR NO CELULAR (FUNCIONA SEM INTERNET)
+
+O que é
+  Um app web instalável (PWA), feito em HTML, CSS e JavaScript puros, sem bibliotecas.
+  Depois de instalado, abre pelo ícone na tela inicial, em tela cheia, e funciona sem internet.
+
+Por que precisa ser publicado uma vez
+  O Android só instala e guarda um app web para uso sem internet se ele for aberto
+  uma vez por um endereço https. Abrir o index.html direto do arquivo não funciona.
+  Hospedar é grátis nas duas opções abaixo.
+
+OPÇÃO 1 — Netlify (mais simples, sem programação)
+  1. No computador, crie uma conta grátis em https://app.netlify.com
+  2. Abra https://app.netlify.com/drop
+  3. Arraste a pasta treino-app inteira (descompactada) para a página.
+  4. Ele gera um endereço tipo https://nome-qualquer.netlify.app
+  5. No celular, abra esse endereço no Chrome > menu ⋮ > "Instalar app" (ou "Adicionar à tela inicial").
+
+OPÇÃO 2 — GitHub Pages
+  1. Crie uma conta grátis em https://github.com e um repositório público (ex.: treino-app).
+  2. Envie todos os arquivos desta pasta (botão "Add file" > "Upload files").
+  3. Settings > Pages > Branch: main > Save.
+  4. Em alguns minutos o endereço fica https://SEU-USUARIO.github.io/treino-app/
+  5. No celular: Chrome > menu ⋮ > "Instalar app".
+
+Passar os dados que você já tem
+  O app no Claude e o app instalado guardam os dados separadamente.
+  No app do Claude: aba Guia > Backup > "Baixar arquivo de backup".
+  No app instalado: aba Guia > Backup > "Restaurar de arquivo".
+
+Atualizar o app no futuro
+  Substitua os arquivos na hospedagem e, no sw.js, troque VERSION = 'treino-v1' por 'treino-v2'.
+  O celular baixa a nova versão na próxima vez que abrir o app com internet.
+
+Play Store (futuro)
+  Este formato pode virar app da Play Store sem reescrever o código, usando uma
+  "Trusted Web Activity" (ferramentas gratuitas: PWABuilder, https://www.pwabuilder.com,
+  ou Bubblewrap do Google). É preciso:
+   - o app publicado num endereço https (opção 1 ou 2);
+   - uma conta de desenvolvedor Google Play (taxa única, confira o valor atual no site do Google);
+   - uma política de privacidade (o app não envia dados para lugar nenhum; tudo fica no celular).
+
+Arquivos
+  index.html               o app inteiro (telas, desenhos, cronômetro, regras)
+  sw.js                    faz o app funcionar sem internet
+  manifest.webmanifest     nome, cor e ícones para instalar
+  icon-*.png, apple-touch-icon.png   ícones
