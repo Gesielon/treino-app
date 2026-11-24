@@ -42,7 +42,7 @@ button,input,select,label,a,summary{touch-action:manipulation}
 .timer{contain:layout paint;transform:translateZ(0)}
 body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  padding-block:16px calc(150px + env(safe-area-inset-bottom,0px))}
+  padding-block:16px calc(175px + env(safe-area-inset-bottom,0px))}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
 .wrap{max-width:720px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
 .top{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;flex-wrap:wrap}
@@ -156,6 +156,12 @@ td.pos{color:var(--accent);font-weight:700} td.neg{color:var(--over);font-weight
 .dot{font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--bg)}
 .dot.up{background:var(--accent-soft);color:var(--accent)} .dot.down{background:var(--over-soft);color:var(--over)}
 /* cronômetro */
+.trem{max-width:720px;margin:0 auto 6px;font-size:.8rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;min-height:1.2em}
+.trem.late{color:var(--over)}
+.pill.plus{background:var(--accent);color:var(--on-accent);border-color:transparent}
+.pill.minus{background:var(--over-soft);color:var(--over);border-color:transparent}
+ul.adj{margin:6px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:5px}
+
 .timer{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--surface);border-top:1px solid var(--line);
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
   padding-top:10px;padding-bottom:calc(10px + env(safe-area-inset-bottom,0px));box-shadow:0 -6px 20px rgba(0,0,0,.08)}
@@ -198,6 +204,7 @@ td.pos{color:var(--accent);font-weight:700} td.neg{color:var(--over);font-weight
 </div>
 
 <div class="timer idle" id="timer" aria-live="polite">
+  <div class="trem" id="tRem"></div>
   <div class="tin">
     <div class="tinfo"><div class="tlabel" id="tLabel">Cronômetro</div><div class="tsub" id="tSub">Terminou uma série? Toque nela para o descanso começar.</div><div class="tbar"><i id="tBar"></i></div></div>
     <div class="tbig" id="tBig">--:--</div>
@@ -514,40 +521,77 @@ EX.elevPerna={n:'Elevação de Pernas (deitado)',q:'elevação de pernas deitado
   b:P([40,126],[[[52,134],[100,136]],[[100,136],[110,100],[112,62]],[[52,134],[90,140]]]),
   arr:[A(170,120,124,58,164,70)],
   t:['Deitado, mãos ao lado do corpo ou embaixo do quadril.','Suba as pernas esticadas até apontarem para o teto, sem dar impulso.','Desça devagar sem encostar no chão. Lombar sempre apoiada.']};
+
+// ---- supino na máquina, abdominal na polia, barra fixa ----
+EX.supMaq={n:'Supino Reto na Máquina (deitado)',q:'supino reto maquina deitado execução',
+  eq:flatBench+EL(66,30,66,104,3)+EL(54,30,78,30,3),
+  a:P([46,96],[...lyingBody,[[62,98],[72,110],[72,86]]],L(64,86,80,86,4)),
+  b:P([46,96],[...lyingBody,[[62,98],[63,78],[64,58]]],L(56,58,72,58,4)),
+  arr:[A(92,86,92,58)],
+  t:['Deitado no banco da máquina, pegadas na altura do meio do peito.','Empurre até quase esticar os braços, sem travar os cotovelos.','Desça controlando em 2 a 3 segundos. Por ser guiada, dá para usar carga alta com segurança.']};
+EX.abCabo={n:'Abdominal na Polia (ajoelhado)',q:'abdominal na polia alta ajoelhado corda execução',
+  eq:ER(164,0,10,143)+`<circle cx="168" cy="14" r="5" class="eq"/>`+ground,
+  a:P([72,62],[[[100,104],[80,72]],[[100,104],[100,140],[130,140]],[[80,72],[70,80],[74,64]]],L(74,64,168,14,1.5)+C(74,64,3)),
+  b:P([62,110],[[[100,104],[74,98]],[[100,104],[100,140],[130,140]],[[74,98],[78,110],[70,100]]],L(70,100,168,14,1.5)+C(70,100,3)),
+  arr:[A(56,56,46,112,36,82)],
+  t:['Ajoelhado de frente para a polia alta, segure a corda ao lado da cabeça.','Enrole o tronco levando os cotovelos em direção às coxas; o quadril fica parado.','Volte devagar. Aqui dá para colocar carga, então o abdômen progride como os outros músculos.']};
+EX.abd={...EX.abd,n:'Abdominal Remador (máquina, sem carga)'};
+const doorEq=ER(36,0,8,143)+ER(156,0,8,143)+EL(36,16,164,16,4)+ground;
+const hang=(y)=>[[[84,y+44],[116,y+44]],[[100,y+38],[100,y+84]],[[92,y+84],[108,y+84]],[[92,y+84],[88,y+106],[96,y+120]],[[108,y+84],[112,y+106],[104,y+120]]];
+EX.barraFixa={n:'Barra Fixa (na porta)',q:'barra fixa pull up iniciante execução',eq:doorEq,
+  a:P([100,48],[...hang(16),[[84,60],[80,38],[84,16]],[[116,60],[120,38],[116,16]]]),
+  b:P([100,6],[...hang(-18),[[84,26],[70,34],[84,16]],[[116,26],[130,34],[116,16]]]),
+  arr:[A(146,96,146,40)],
+  t:['Mãos um pouco mais abertas que os ombros, palmas para a frente.','Puxe até o queixo passar da barra, levando os cotovelos para baixo; desça até quase esticar os braços.','Antes de usar, confira o peso máximo que a sua barra aguenta e se ela está bem presa no batente.'],
+  easy:'Negativa na Barra'};
+EX.barraSup={...EX.barraFixa,n:'Barra Fixa Supinada',q:'barra fixa supinada chin up execução',
+  t:['Palmas viradas para você, mãos na largura dos ombros.','Puxe até o queixo passar da barra. Costuma ser um pouco mais fácil e trabalha mais o bíceps.','Confira o peso máximo que a sua barra aguenta.'],easy:'Negativa na Barra'};
+EX.barraNeg={...EX.barraFixa,n:'Negativa na Barra',q:'barra fixa negativa excêntrica iniciante',
+  arr:[A(146,40,146,96)],
+  t:['Suba com um pulo ou apoiado numa cadeira até o queixo passar da barra.','Desça devagar, contando 3 a 5 segundos, até esticar os braços.','É o caminho para conseguir fazer a barra completa. Conte cada descida como 1 repetição.']};
+EX.flexao.easy='Flexão com Joelhos (apoie os joelhos no chão)';
 // ---- treinos ----
 // Alternativas para quando o aparelho estiver ocupado (a 1ª da lista do cartão é a principal)
 const ALT={legpress:['hack','legpressAlto','goblet'],stiff:['flexora','legpressAlto','ponte'],
- supino:['supHal','peck','flexao'],supinc:['supHal','supino','peck','cruciHal'],pulley:['pulleySup','serrote','remada'],remada:['cavalinho','serrote','remCurvHal'],
+ supMaq:['supino','supHal','peck','flexao'],supinc:['supHal','supMaq','supino','peck','cruciHal'],pulley:['pulleySup','serrote','remada'],remada:['cavalinho','serrote','remCurvHal'],
  desenv:['desenvHal','arnold'],elev:['elevCabo','elevSent'],crucinv:['facepull','crucInvHal'],
- tricorda:['tripulley','triFrances','triTesta'],rosca:['roscaAlt','roscaHal','martelo'],martelo:['roscaHal','rosca'],
- abd:['abdChao','elevPerna'],agachLivre:['afundo']};
+ tricorda:['tripulley','triFrances','triTesta'],tripulley:['tricorda','triFrances','triTesta'],rosca:['roscaAlt','roscaHal','martelo'],martelo:['roscaHal','rosca','roscaAlt'],
+ abCabo:['abd','elevPerna','abdChao'],agachLivre:['afundo'],barraFixa:['barraSup','barraNeg','remMochila']};
 const X=(ex,sets,reps,rest)=>({ex,sets,reps,rest});
-// Treino A e B alternados, com prioridade para a parte de cima (ombro, costas, peito, braço, antebraço, abdômen).
-// Pernas: 1 exercício grande por dia, para manter e continuar evoluindo sem atrapalhar a caminhada.
+// Treino A e B alternados, com prioridade para a parte de cima (ombro, costas, peito, braço, antebraço).
+// Pernas: 1 exercício grande por dia. Braço: tríceps e bíceps nos dois dias (12 séries de cada por semana).
 const DAYS=[
  {id:'A',tab:'A',title:'Treino A',kind:'gym',items:[
-  X('legpress',3,'8–12',90),X('supino',3,'8–10',90),X('pulley',3,'8–12',90),X('desenv',3,'8–12',90),
-  X('elev',3,'12–15',60),X('tricorda',3,'10–12',60),X('abd',3,'12–20',45)]},
+  X('legpress',3,'8–12',90),X('supMaq',3,'8–10',90),X('pulley',3,'8–12',90),X('desenv',3,'8–12',90),
+  X('elev',3,'12–15',60),X('tricorda',3,'10–12',60),X('martelo',3,'10–12',60)]},
  {id:'B',tab:'B',title:'Treino B',kind:'gym',items:[
   X('stiff',3,'8–10',90),X('remada',3,'10–12',90),X('supinc',3,'8–12',90),X('crucinv',3,'12–15',60),
-  X('rosca',3,'10–12',60),X('martelo',3,'10–12',60),X('abd',3,'12–20',45)]},
+  X('rosca',3,'10–12',60),X('tripulley',3,'10–12',60),X('abCabo',3,'10–15',45)]},
  {id:'H',tab:'Casa',title:'Treino em casa',kind:'home',items:[
-  X('agachLivre',2,'12–15',30),X('flexao',2,'8–15',30),X('ponte',2,'15',30),X('remMochila',2,'12–15',30),X('prancha',2,'30–45 s',30)]}
+  X('agachLivre',2,'12–15',30),X('barraFixa',2,'4–10',45),X('flexao',2,'8–15',30),X('ponte',2,'15',30),X('prancha',2,'30–45 s',30)]}
 ];
+// Grupo muscular de cada lugar do treino, e quais grupos os exercícios grandes também cansam.
+const GRP={legpress:'legs',stiff:'legs',supMaq:'chest',supinc:'chest',pulley:'back',remada:'back',desenv:'shoulders',elev:'shoulders',crucinv:'shoulders',
+ tricorda:'tri',tripulley:'tri',martelo:'bi',rosca:'bi',abCabo:'core',agachLivre:'legs',barraFixa:'back',flexao:'chest',ponte:'legs',prancha:'core'};
+const HITS={legpress:['legs'],stiff:['legs'],supMaq:['chest','tri','shoulders'],supinc:['chest','tri','shoulders'],pulley:['back','bi'],remada:['back','bi'],desenv:['shoulders','tri']};
+const GN={legs:'pernas',chest:'peito',back:'costas',shoulders:'ombros',tri:'tríceps',bi:'bíceps',core:'abdômen'};
+const DONOR=['core','bi','tri','shoulders'];
+const isComp=ex=>!!HITS[ex];
 const TRANS={gym:90,home:30};
 const ROT=['A','B'];
 
 // Cargas iniciais (as que você informou); o resto você preenche.
-const START={abd:70,supino:30,peck:60,remada:50,pulley:50,cavalinho:24,rosca:7,roscaAlt:9,roscaHal:9,martelo:9,legpress:140,legpressAlto:140,hack:80,
+const START={supMaq:30,supino:30,peck:60,remada:50,pulley:50,cavalinho:24,rosca:7,roscaAlt:9,roscaHal:9,martelo:9,legpress:140,legpressAlto:140,hack:80,
  extensora:55,flexora:40,pant:55,elev:8,desenv:24,tricorda:40,tripulley:40,triFrances:17.5,cruciHal:12.5};
 // Degrau de carga: halteres 1 kg; máquinas de anilha 2 kg (trocar anilha de 4 por 5 de cada lado); máquinas de pino e polias 5 kg.
 const DUMB=['elev','supinc','supHal','cruciHal','serrote','remCurvHal','desenvHal','triFrances','triTesta','roscaHal','martelo','roscaAlt','goblet','afundo','stiff','pantDegrau','rosca','arnold','elevSent','crucInvHal'];
 const PLATE=['legpress','legpressAlto','hack','supino','desenv','cavalinho'];
+// Supino na máquina e polias: 5 kg (pino); se for de anilha na sua academia, digite o valor.
 const STEP=k=>DUMB.includes(k)?1:PLATE.includes(k)?2:5;
 // Aumento sugerido: cerca de 5% da carga, arredondado ao degrau (no mínimo 1 degrau).
 const INC=(k,w)=>{const st=STEP(k);return Math.max(st,Math.round(w*0.05/st)*st)};
 // Exercícios só com o peso do corpo (sem campo de carga)
-const BW=['flexao','prancha','agachLivre','ponte','abdChao','elevPerna'];
+const BW=['flexao','prancha','agachLivre','ponte','abdChao','elevPerna','abd','barraFixa','barraSup','barraNeg','remMochila'];
 // Até onde ir em cada série
 const FAIL={
  legpress:'2-3',legpressAlto:'2-3',hack:'2-3',goblet:'2-3',afundo:'2-3',stiff:'2-3',cavalinho:'2-3',remCurvHal:'2-3',
@@ -566,18 +610,67 @@ const kg=n=>(n===''||n==null||isNaN(n))?'':(+n).toLocaleString('pt-BR',{maximumF
 const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isNaN(n)?'':n};
 const today=()=>{const d=new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')};
 const br=iso=>iso.split('-').reverse().slice(0,2).join('/');
-function estMin(d){let t=d.kind==='gym'?300:0;d.items.forEach((it,i)=>{t+=it.sets*45+(it.sets-1)*it.rest+(i?TRANS[d.kind]:0)});return Math.round(t/60)}
+function estMin(d){const pl=planOf(d);let t=d.kind==='gym'?300:0;d.items.forEach((it,i)=>{const n=pl.sets[i];t+=n*45+(n-1)*it.rest+(i?TRANS[d.kind]:0)});return Math.round(t/60)}
 
 // ---- estado (salvo só neste aparelho) ----
 const KEY='treino-abcd-v2';
-let S={prog:{},hist:[],exlog:{},varCount:{},sound:true,timer:null,view:null,updatedAt:0};
+let S={prog:{},hist:[],exlog:{},varCount:{},order:{},debt:null,sound:true,timer:null,view:null,updatedAt:0,ver:4};
 try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v&&typeof v==='object')S=Object.assign(S,v)}catch(e){}
-S.exlog=S.exlog||{};S.varCount=S.varCount||{};
+S.exlog=S.exlog||{};S.varCount=S.varCount||{};S.order=S.order||{};
+// Treinos mudaram nesta versão: descarta treino em andamento da versão antiga (histórico fica).
+if(S.ver!==4){S.prog={};S.timer=null;S.ver=4}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 const P_=id=>{const p=(S.prog[id]=S.prog[id]||{sets:{},vars:{},cur:0,warm:false,start:null});p.base=p.base||{};p.w=p.w||{};p.r=p.r||{};return p};
 const dayById=id=>DAYS.find(d=>d.id===id);
 function nextGym(){const h=[...S.hist].reverse().find(x=>ROT.includes(x.d));return h?ROT[(ROT.indexOf(h.d)+1)%ROT.length]:'A'}
 if(!S.view||!dayById(S.view)&&S.view!=='G'){const act=Object.keys(S.prog).find(k=>dayById(k)&&S.prog[k].start);S.view=act||nextGym()}
+
+// ---- plano do dia: ordem e séries ----
+// 1) Ordem: a mesma em que você fez esse treino da última vez.
+// 2) Compensação: o que ficou faltando no último treino ganha séries extras hoje (máx. +2),
+//    tiradas de exercícios pequenos (abdômen, bíceps, tríceps, ombro isolado), para não aumentar o tempo.
+// 3) Correção: exercício grande vem antes do pequeno do mesmo músculo (ex.: supino antes do tríceps).
+function computePlan(d){
+  const n=d.items.length,sets=d.items.map(it=>it.sets),notes=[],carry=[];
+  let order=[...Array(n).keys()];
+  const last=S.order[d.id];
+  if(last&&last.length){const pos=ex=>{const k=last.indexOf(ex);return k<0?999:k};order.sort((a,b)=>pos(d.items[a].ex)-pos(d.items[b].ex)||a-b)}
+  const debt=d.kind==='gym'&&S.debt?S.debt.items:[],tot={},front=[],noSlot=[],noTime=[];
+  debt.forEach(x=>{tot[x.g]=(tot[x.g]||0)+x.miss});
+  // Tempo: usa primeiro a folga até 55 min (com 3 min de margem para esperar aparelho); depois tira séries de exercícios pequenos.
+  const secs=()=>{let t=d.kind==='gym'?300:0;d.items.forEach((it,k)=>{t+=sets[k]*45+(sets[k]-1)*it.rest+(k?TRANS[d.kind]:0)});return t};
+  let budget=55*60-180-secs();
+  const RANK=['legs','back','chest','shoulders','tri','bi','core'],groups=RANK.filter(g=>tot[g]),tgt={},add={},gave={};
+  groups.forEach(g=>{const c=order.filter(i=>GRP[d.items[i].ex]===g).sort((a,b)=>isComp(d.items[b].ex)-isComp(d.items[a].ex));
+    if(c.length){tgt[g]=c[0];add[g]=0;gave[g]=[]}else noSlot.push(g)});
+  const targets=Object.values(tgt);
+  for(const pass of [1,2])for(const g of groups){const t=tgt[g];if(t===undefined||Math.min(2,tot[g])<pass||sets[t]+add[g]>=5)continue;
+    const cost=45+d.items[t].rest;
+    if(budget>=cost){budget-=cost;add[g]++;continue}
+    let j=-1;for(const dg of DONOR){if(tot[dg])continue;j=order.find(k=>!targets.includes(k)&&!isComp(d.items[k].ex)&&GRP[d.items[k].ex]===dg&&sets[k]>2);if(j!==undefined&&j>=0)break;j=-1}
+    if(j<0)continue;
+    sets[j]--;budget+=45+d.items[j].rest-cost;add[g]++;gave[g].push(j)}
+  groups.forEach(g=>{const t=tgt[g];if(t===undefined)return;
+    if(!add[g]){noTime.push(g);return}
+    sets[t]+=add[g];front.push(t);
+    notes.push(`<b>+${add[g]} série${add[g]>1?'s':''} em ${EX[exKey(d,t)].n}</b> para compensar ${GN[g]}, que ficou faltando no último treino. ${gave[g].length?`Para caber em 55 min: −1 série em ${gave[g].map(j=>EX[exKey(d,j)].n).join(' e ')}.`:'Cabe na folga dos 55 min.'} Vem no começo do treino, para não ficar de fora de novo.`)});
+  noSlot.forEach(g=>carry.push(...debt.filter(x=>x.g===g)));
+  noTime.forEach(g=>carry.push(...debt.filter(x=>x.g===g)));
+  if(noSlot.length)notes.push(`${noSlot.map(g=>GN[g]).join(' e ')}: não há exercício desse grupo neste treino; a compensação fica para o próximo.`);
+  if(noTime.length)notes.push(`${noTime.map(g=>GN[g]).join(' e ')}: não coube hoje sem passar de 55 min; a compensação fica para o próximo.`);
+  front.reverse().forEach(t=>{order=[t,...order.filter(x=>x!==t)]});
+  const moved=[];let changed=true,guard=0;
+  while(changed&&guard++<20){changed=false;
+    for(let x=0;x<order.length&&!changed;x++){const I=d.items[order[x]].ex;if(isComp(I))continue;
+      for(let y=x+1;y<order.length;y++){const C=d.items[order[y]].ex;
+        if(isComp(C)&&HITS[C].includes(GRP[I])){const c=order.splice(y,1)[0];order.splice(x,0,c);moved.push([c,order[x+1]]);changed=true;break}}}}
+  if(moved.length)notes.push('Ordem ajustada: '+moved.map(([c,i])=>`<b>${EX[exKey(d,c)].n}</b> antes de ${EX[exKey(d,i)].n}`).join('; ')+'. O exercício grande vem antes, para o músculo menor não chegar cansado nele.');
+  return {order,sets,notes,carry};
+}
+let _pc={};
+function planOf(d){const p=S.prog[d.id];if(p&&p.plan)return p.plan;return _pc[d.id]||(_pc[d.id]=computePlan(d))}
+const itemOf=(d,i)=>({...d.items[i],sets:planOf(d).sets[i]});
+function startSession(d){const p=P_(d.id);if(!p.start){p.start=Date.now();p.plan=computePlan(d);p.seq=[]}}
 
 // ---- regra de progressão (dupla progressão) ----
 // Avalia pelo peso da 1ª série. Todas as séries no topo da faixa → sobe a carga.
@@ -588,17 +681,20 @@ const roundStep=(k,w)=>Math.round(w/STEP(k))*STEP(k);
 function estW(key,w,r,target){const st=STEP(key);let nw=w*(1+r/30)/(1+target/30);
   if(r>target){nw=Math.min(nw,w*1.5);nw=Math.max(roundStep(key,nw),w+st,w>0?0:st*2)}else{nw=Math.max(w*0.7,nw);nw=Math.min(roundStep(key,nw),w-st);nw=Math.max(0,nw)}
   return Math.round(nw*100)/100}
-function evaluate(key,it,sets){
+function evaluate(key,it,sets,pre){
   const [mn,mx]=range(it.reps),sec=isSec(it.reps),bw=BW.includes(key),u=sec?' s':'',st=w0x=>INC(key,w0x);
   const reps=sets.map(s=>+s.r||0),w0=sets[0].w,wDrop=!bw&&sets.some(s=>s.w!==''&&w0!==''&&s.w<w0);
   if(bw){
+    if(key==='abd'&&reps.every(r=>r>=mx))return {dir:'up',w:'',msg:`Sem carga, o Remador só progride com mais repetições, e ${mx}+ já passa da faixa de crescimento. Prefira o Abdominal na Polia, onde dá para pôr peso.`};
+    if(key==='barraNeg'&&reps.every(r=>r>=mx))return {dir:'up',w:'',msg:`Fez ${mx} descidas em todas. Próximo: tente a Barra Fixa completa.`};
     if(reps.every(r=>r>=mx))return {dir:'up',w:'',msg:sec?`Bateu ${mx} s em todas. Próximo: tente ${mx+10} s.`:`Bateu ${mx} em todas. Próximo: faça mais devagar (3 s para descer) ou passe para uma versão mais difícil.`};
-    if(reps[0]<mn)return {dir:'down',w:'',msg:`Abaixo de ${mn}${u} na 1ª série. Use a versão mais fácil (ex.: flexão com joelhos) até chegar a ${mn}${u}.`};
+    if(reps[0]<mn)return {dir:'down',w:'',msg:`Abaixo de ${mn}${u} na 1ª série. Use ${EX[key]&&EX[key].easy?'a '+EX[key].easy:'uma versão mais fácil'} até chegar a ${mn}${u}.`};
     return {dir:'keep',w:'',msg:`Mantenha e tente +1${sec?'0 s':' repetição'} nas séries abaixo de ${mx}${u}.`};
   }
   if(w0===''||w0==null)return {dir:'keep',w:'',msg:'Anote o peso para o app conseguir sugerir a carga.'};
   if(!wDrop&&reps[0]>=mx+3){const nw=estW(key,w0,reps[0],(mn+mx)/2);return {dir:'up',w:nw,msg:`Repetições demais: ${reps[0]} na 1ª série, e a faixa é ${mn}–${mx}. Muito acima da faixa, o exercício treina mais resistência do que crescimento. Suba para cerca de ${kg(nw)} kg (estimativa); no próximo treino o app corrige com o que você fizer.`}}
   if(!wDrop&&reps.every(r=>r>=mx)){const nw=w0+st(w0);return {dir:'up',w:nw,msg:`Fez ${mx} ou mais em todas. Suba para ${kg(nw)} kg e volte a mirar ${mn}+.`}}
+  if(pre&&reps[0]<mn)return {dir:'keep',w:w0,msg:`Ficou abaixo de ${mn} porque veio depois de ${pre}, que cansa o mesmo músculo. Mantenha ${kg(w0)} kg; no próximo treino a ordem é corrigida.`};
   if(reps[0]<=mn-3){const nw=estW(key,w0,reps[0],mn+1);return {dir:'down',w:nw,msg:`Poucas repetições: ${reps[0]} na 1ª série, e a faixa é ${mn}–${mx}. Baixe para cerca de ${kg(nw)} kg (estimativa) para fazer de ${mn} a ${mx} com boa técnica.`}}
   if(reps[0]<mn){const nw=Math.max(0,w0-st(w0));return {dir:'down',w:nw,msg:`A 1ª série ficou abaixo de ${mn}. Baixe para ${kg(nw)} kg.`}}
   if(wDrop)return {dir:'keep',w:w0,msg:`Você baixou o peso no meio. Mantenha ${kg(w0)} kg e tente fazer todas as séries com ele.`};
@@ -611,10 +707,13 @@ const lastLog=(key,day,strict)=>{const l=S.exlog[key]||[];for(let j=l.length-1;j
 function sugW(key,day){const l=lastLog(key,day);if(l&&l.ev&&l.ev.w!==''&&l.ev.w!=null)return l.ev.w;return START[key]??''}
 // Peso da série: o que você digitou; senão, o da série anterior; na 1ª, a carga sugerida.
 function wAt(p,i,s,key,day){for(let k=s;k>=0;k--){const v=p.w[i]?.[k];if(v!==undefined)return v}return sugW(key,day)}
+// Algum exercício feito antes, hoje, cansou o músculo deste? (só exercício pequeno antes de um que usa o mesmo músculo)
+function preOf(d,i){const p=P_(d.id),me=d.items[i].ex,hits=HITS[me]||[GRP[me]];
+  const j=(p.seq||[]).find(j=>j!==i&&!isComp(d.items[j].ex)&&hits.includes(GRP[d.items[j].ex]));return j===undefined?null:EX[exKey(d,j)].n}
 function logExercise(d,i){
-  const p=P_(d.id),it=d.items[i],key=exKey(d,i),[mn]=range(it.reps);
+  const p=P_(d.id),it=itemOf(d,i),key=exKey(d,i),[mn]=range(it.reps);
   const sets=[];for(let s=0;s<it.sets;s++)sets.push({w:BW.includes(key)?'':wAt(p,i,s,key,d.id),r:p.r[i]?.[s]??mn});
-  const ev=evaluate(key,it,sets),date=today();
+  const ev=evaluate(key,it,sets,preOf(d,i)),date=today();
   const L=(S.exlog[key]=S.exlog[key]||[]);
   if(L.length&&L[L.length-1].date===date&&L[L.length-1].day===d.id)L.pop();
   L.push({date,day:d.id,sets,ev});S.exlog[key]=L.slice(-20);touch();
@@ -640,8 +739,23 @@ const $=id=>document.getElementById(id);
 // Só mexe na tela quando algo mudou (deixa a rolagem leve).
 const _t={};
 function put(id,v,prop='textContent'){const k=id+prop;if(_t[k]===v)return;_t[k]=v;const el=$(id);if(el)el[prop]=v}
+// Quanto falta do treino do dia (exercícios e minutos), sempre visível na barra de baixo.
+function remInfo(){
+  const d=dayById(S.view);if(!d)return null;
+  const p=S.prog[d.id]||{sets:{}},pl=planOf(d),now=Date.now();
+  const left=pl.order.filter(i=>(p.sets[i]||0)<pl.sets[i]);
+  let t=(d.kind==='gym'&&!p.warm)?300:0;
+  left.forEach((i,k)=>{const r=pl.sets[i]-(p.sets[i]||0),rest=d.items[i].rest;t+=r*45+(r-1)*rest+(k?TRANS[d.kind]:0)});
+  if(S.timer)t+=Math.max(0,(S.timer.end-now)/1000);
+  const el=p.start?(now-p.start)/1000:0,lim=d.kind==='gym'?55*60:15*60;
+  return {n:left.length,min:Math.ceil(t/60),late:el+t>lim,over:Math.ceil((el+t-lim)/60),lim:lim/60};
+}
 function tick(){
   const t=S.timer,pr=S.prog[S.view],sc=$('sessClock');
+  const ri=remInfo();
+  if(!ri)put('tRem','');else if(!ri.n)put('tRem','✓ Treino do dia completo');
+  else put('tRem',`Faltam ${ri.n} exercício${ri.n>1?'s':''} · ~${ri.min} min${ri.late?` · passa ${ri.over} min de ${ri.lim}`:''}`);
+  put('tRem',ri&&ri.late&&ri.n?'trem late':'trem','className');
   if(sc){const el=pr&&pr.start?(Date.now()-pr.start)/1000:0,txt='Treino '+fmt(el)+' / 55:00';if(sc.textContent!==txt)sc.textContent=txt;const late=el>55*60;if(sc.classList.contains('late')!==late)sc.classList.toggle('late',late)}
   if(!t){put('timer','timer idle','className');put('tLabel','Cronômetro');put('tSub','Terminou uma série? Toque no ✓ dela para o descanso começar.');put('tBig','--:--');if(_t.bar!=='scaleX(0)'){_t.bar='scaleX(0)';$('tBar').style.transform='scaleX(0)'}put('tBtns',true,'hidden');return}
   put('tBtns',false,'hidden');
@@ -663,15 +777,16 @@ function prefKey(d,i){const o=optsOf(d)(i),c=S.varCount[slot(d,i)]||{};let best=
 function exKey(d,i){const p=P_(d.id),o=optsOf(d)(i);let v=p.vars[i];if(typeof v==='number')v=o[v];return v&&o.includes(v)?v:prefKey(d,i)}
 function countVar(d,i,delta){const sl=slot(d,i),k=exKey(d,i),c=(S.varCount[sl]=S.varCount[sl]||{});c[k]=Math.max(0,(c[k]||0)+delta)}
 function tapSet(d,i,s){
-  const p=P_(d.id),it=d.items[i],n=p.sets[i]||0;
-  if(s<n){for(let q=s;q<n;q++)countVar(d,i,-1);p.sets[i]=s;p.cur=i;stopTimer();save();render();return}
+  const p=P_(d.id),it=itemOf(d,i),n=p.sets[i]||0;
+  if(s<n){for(let q=s;q<n;q++)countVar(d,i,-1);if(n>=it.sets&&p.seq)p.seq=p.seq.filter(x=>x!==i);p.sets[i]=s;p.cur=i;stopTimer();save();render();return}
   if(s!==n)return;
-  if(!p.start)p.start=Date.now();
+  startSession(d);
   p.sets[i]=n+1;p.cur=i;countVar(d,i,1);
   if(n+1<it.sets){startTimer(it.rest,'Descanso',`Próxima: série ${n+2} de ${it.sets} · ${EX[exKey(d,i)].n}`)}
   else{
-    logExercise(d,i);
-    let j=-1;for(let k=1;k<=d.items.length;k++){const c=(i+k)%d.items.length;if((p.sets[c]||0)<d.items[c].sets){j=c;break}}
+    logExercise(d,i);(p.seq=p.seq||[]).includes(i)||p.seq.push(i);
+    const pl=planOf(d),ord=pl.order,ps=ord.indexOf(i);
+    let j=-1;for(let k=1;k<=ord.length;k++){const c=ord[(ps+k)%ord.length];if((p.sets[c]||0)<pl.sets[c]){j=c;break}}
     if(j>=0){p.cur=j;startTimer(TRANS[d.kind],'Troca de exercício','Próximo: '+EX[exKey(d,j)].n)}
     else{p.cur=-1;stopTimer()}
   }
@@ -679,12 +794,19 @@ function tapSet(d,i,s){
   if(n+1>=it.sets&&p.cur>=0){const el=$('ex-'+i);el&&el.scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'auto':'smooth',block:'start'})}
 }
 function renderCard(d,i){const el=$('ex-'+i);if(el)el.outerHTML=card(d,i);else render()}
-function finish(d){S.hist.push({d:d.id,date:today()});S.hist=S.hist.slice(-80);touch();delete S.prog[d.id];stopTimer();
+// Ao finalizar: guarda a ordem que você fez e o que ficou faltando (para compensar no próximo treino).
+function finish(d){
+  if(d.kind==='gym'){const p=P_(d.id),pl=planOf(d),miss=[];
+    d.items.forEach((it,i)=>{const m=pl.sets[i]-(p.sets[i]||0);if(m>0)miss.push({g:GRP[it.ex],ex:it.ex,miss:m})});
+    const items=[...miss,...(pl.carry||[]).filter(x=>!miss.some(y=>y.g===x.g))];
+    S.debt=items.length?{date:today(),from:d.id,items}:null;
+    if(p.seq&&p.seq.length)S.order[d.id]=p.seq.map(i=>d.items[i].ex)}
+  S.hist.push({d:d.id,date:today()});S.hist=S.hist.slice(-80);touch();delete S.prog[d.id];stopTimer();
   if(d.kind==='gym')S.view=nextGym();save();render();window.scrollTo({top:0})}
 
 // ---- sugestão de troca ----
 // Tipo de movimento de cada exercício, para checar o equilíbrio da semana.
-const TAG={pulleySup:'vPull',supino:'chestPress',supHal:'chestPress',supinc:'chestPress',flexao:'chestPress',peck:'chestFly',cruciHal:'chestFly',
+const TAG={supMaq:'chestPress',pulleySup:'vPull',supino:'chestPress',supHal:'chestPress',supinc:'chestPress',flexao:'chestPress',peck:'chestFly',cruciHal:'chestFly',
  pulley:'vPull',serrote:'row',remada:'row',cavalinho:'row',remCurvHal:'row',stiff:'hinge',flexora:'hamIso',legpressAlto:'quad',legpress:'quad',hack:'quad',goblet:'quad'};
 // Movimentos que precisam aparecer pelo menos 1 vez em 7 dias.
 const NEED={
@@ -725,11 +847,11 @@ function stepper(act,i,s,val,unit,lbl){
   return `<div class="stp" role="group" aria-label="${lbl}"><button type="button" data-act="${act}-" data-i="${i}" data-s="${s}" aria-label="Diminuir ${lbl}">−</button><input type="text" inputmode="decimal" id="${act}-${i}-${s}" data-act="${act}" data-i="${i}" data-s="${s}" value="${kg(val)}" aria-label="${lbl}"><span class="u">${unit}</span><button type="button" data-act="${act}+" data-i="${i}" data-s="${s}" aria-label="Aumentar ${lbl}">+</button></div>`;
 }
 function card(d,i){
-  const p=P_(d.id),it=d.items[i],n=p.sets[i]||0,done=n>=it.sets,cur=p.cur===i&&!done,key=exKey(d,i),pref=prefKey(d,i),e=EX[key];
+  const p=P_(d.id),it=itemOf(d,i),n=p.sets[i]||0,done=n>=it.sets,cur=p.cur===i&&!done,key=exKey(d,i),pref=prefKey(d,i),e=EX[key],pos=planOf(d).order.indexOf(i)+1,extra=it.sets-d.items[i].sets;
   const opts=[it.ex,...(ALT[it.ex]||[])],bw=BW.includes(key),[mn,mx]=range(it.reps),sec=isSec(it.reps);
   const fl=FAILTXT[failOf(key,d)],last=lastLog(key,d.id);
-  let h=`<article class="card${cur?' cur':''}${done?' done':''}" id="ex-${i}"><div class="chead"><h3><span class="num">${i+1}</span>${e.n}</h3>${cur?'<span class="badge now">Fazendo agora</span>':done?'<span class="badge ok">✓ Feito</span>':''}</div>`;
-  h+=`<div class="dose"><span class="pill">${it.sets} × ${it.reps}</span><span class="pill rest">descanso ${it.rest} s</span><span class="pill fail f${failOf(key,d)}" title="${fl[1]}">${fl[0]}</span></div>`;
+  let h=`<article class="card${cur?' cur':''}${done?' done':''}" id="ex-${i}"><div class="chead"><h3><span class="num">${pos}</span>${e.n}</h3>${cur?'<span class="badge now">Fazendo agora</span>':done?'<span class="badge ok">✓ Feito</span>':''}</div>`;
+  h+=`<div class="dose"><span class="pill">${it.sets} × ${it.reps}</span>${extra?`<span class="pill ${extra>0?'plus':'minus'}">${extra>0?'+':''}${extra} hoje</span>`:''}<span class="pill rest">descanso ${it.rest} s</span><span class="pill fail f${failOf(key,d)}" title="${fl[1]}">${fl[0]}</span></div>`;
   if(done){
     const l=last&&last.date===today()?last:null;
     if(l)h+=`<div class="ev ${l.ev.dir}"><b>${DIR[l.ev.dir][0]} ${DIR[l.ev.dir][1]}</b> ${l.ev.msg}<div class="evsets">Hoje: ${l.sets.map(s=>(bw?'':kg(s.w)+' kg × ')+s.r+(sec?' s':'')).join(' · ')}</div></div>`;
@@ -754,11 +876,12 @@ function card(d,i){
   return h+'</article>';
 }
 function dayHTML(d){
-  const p=P_(d.id),total=d.items.length,doneN=d.items.filter((it,i)=>(p.sets[i]||0)>=it.sets).length;
+  const p=P_(d.id),pl=planOf(d),total=d.items.length,doneN=d.items.filter((it,i)=>(p.sets[i]||0)>=pl.sets[i]).length;
   let h=`<section class="list"><div class="dayhead"><div><h2>${d.title}</h2><p>${d.kind==='gym'?'Corpo inteiro · ':'Dias sem academia · '}≈ ${estMin(d)} min · ${doneN} de ${total} feitos</p></div><span class="sess" id="sessClock"></span></div>`;
   if(d.kind==='gym')h+=`<div class="legend"><span><i style="background:var(--ghost)"></i>início</span><span><i style="background:var(--ink)"></i>fim</span><span><i style="background:var(--accent)"></i>movimento</span></div>`;
   if(d.kind==='gym')h+=`<div class="warm${p.warm?' ok':''}"><span><b>Aquecimento · 5 min</b><br>Bike ou esteira leve + 1 série leve do 1º exercício.</span>${p.warm?'<span class="badge ok">✓ Feito</span>':`<span class="actions"><button type="button" class="prim" data-act="warm">Iniciar 5 min</button><button type="button" class="ghostbtn" data-act="warmok">Já fiz</button></span>`}</div>`;
-  d.items.forEach((_,i)=>h+=card(d,i));
+  if(pl.notes.length)h+=`<div class="ev swap"><b>Treino ajustado hoje</b><ul class="adj">${pl.notes.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
+  pl.order.forEach(i=>h+=card(d,i));
   if(doneN===total)h+=`<div class="finish"><b>Treino concluído</b><span>Toque em finalizar para o app sugerir o próximo treino.</span><button type="button" class="prim" data-act="finish">Finalizar treino</button></div>`;
   else h+=`<div class="actions"><button type="button" class="ghostbtn" data-act="finish">Finalizar mesmo incompleto</button><button type="button" class="ghostbtn" data-act="reset" id="resetBtn">Zerar este treino</button></div>`;
   return h+'</section>';
@@ -789,6 +912,12 @@ function guideHTML(){
   <li>Aumento sugerido: cerca de 5% da carga. Botões + e −: halteres 1 kg; leg press, hack, supino e desenvolvimento articulado e cavalinho 2 kg (trocar uma anilha de 4 por uma de 5 de cada lado); máquinas de pino e polias 5 kg. Se a máquina tiver outro degrau, digite o valor.</li>
   <li>Nas máquinas de anilha, anote sempre do mesmo jeito (por exemplo, o total dos dois lados) para o app comparar certo.</li>
   <li>Carga inicial: as que você informou (você falha por volta da 10ª repetição). Nos exercícios novos, o campo vem vazio: escolha uma carga em que consiga o mínimo da faixa.</li></ul></div>
+  <div class="note"><h3>Ordem e compensação</h3><ul>
+  <li><b>Ordem:</b> o treino aparece na ordem em que você fez da última vez (por exemplo, começar pelo leg press porque o supino estava ocupado).</li>
+  <li><b>Correção da ordem:</b> se um exercício pequeno ficou antes do grande que usa o mesmo músculo (tríceps antes do supino, elevação lateral antes do desenvolvimento, rosca antes da puxada), o app coloca o grande antes e avisa.</li>
+  <li><b>Carga:</b> se você fez o exercício grande depois do pequeno e ficou abaixo da faixa, o app não baixa a carga; ele entende que foi o cansaço da ordem.</li>
+  <li><b>Compensação:</b> se você finalizar o treino sem fazer algum exercício, o próximo treino (A ou B) dá até +2 séries ao exercício do mesmo grupo e tira 1 série de exercícios pequenos. O total de séries fica igual, então o tempo não aumenta. O exercício compensado vem primeiro.</li>
+  <li>Se o próximo treino não tiver exercício daquele grupo, a compensação passa para o treino seguinte.</li></ul></div>
   <div class="note"><h3>Quando o app sugere trocar</h3><ul>
   <li><b>Equilíbrio da semana:</b> se em 7 dias você não fez nenhum supino, nenhuma puxada ou nenhum stiff (por ter escolhido sempre uma alternativa), o cartão sugere voltar a ele e diz o motivo.</li>
   <li><b>Estagnou:</b> se um exercício passou o número de treinos abaixo, naquele dia, sem evoluir na carga nem nas repetições, o app sugere outra opção da lista por algumas semanas. Conta treinos daquele exercício, não dias do calendário.</li>
@@ -802,7 +931,7 @@ function guideHTML(){
   <li>O cálculo é uma estimativa (fórmula de Epley), menos precisa com muitas repetições. Por isso a mudança tem limite por treino, e o seu histórico corrige a carga nos treinos seguintes.</li></ul></div>
   <div class="note"><h3>Abdômen definido e cintura fina</h3><ul>
   <li>O abdominal faz o músculo crescer, mas não queima a gordura da barriga. O abdômen aparece e a cintura afina quando a gordura do corpo todo diminui, na fase de definição que você planejou para depois.</li>
-  <li>Por isso, trate o abdômen como os outros músculos: com carga, na faixa de 12–20 repetições, em vez de 60–70. Ele entrou nos dois treinos (6 séries por semana).</li>
+  <li>Por isso, trate o abdômen como os outros músculos: com carga, na faixa de 10–15 repetições. O principal agora é o <b>Abdominal na Polia</b>, onde dá para colocar peso. O Remador da sua academia não tem carga, então só progride com mais repetições; ele ficou como alternativa. O abdômen fica no Treino B (6 séries por semana).</li>
   <li>Ombro largo e costas largas também deixam a cintura com aparência mais fina, por isso o treino dá prioridade a desenvolvimento, elevação lateral, puxada e remada.</li></ul></div>
   <div class="note"><h3>Até a falha ou não?</h3><ul>
   <li><b>${FAILTXT.sim[0]}:</b> máquinas e polias de braço, ombro, peito e costas, extensora, flexora, panturrilha e abdômen. Nas séries anteriores, pare 1 repetição antes.</li>
@@ -813,7 +942,7 @@ function guideHTML(){
   <div class="note"><h3>Semana sugerida</h3><div class="week">${days.map(x=>`<div class="${x[2]?'g':''}">${x[0]}<b>${x[1].length<3?x[1]:''}</b>${x[1].length<3?'':x[1]}</div>`).join('')}</div>
   <ul><li>Os treinos se alternam: <b>A → B → A → B</b>. Faltou por feriado? Continue de onde parou; a aba com a etiqueta "próximo" mostra qual é.</li>
   <li>Cada exercício aparece 2 vezes por semana. Assim o app ajusta a carga mais rápido e você aprende a técnica mais depressa.</li>
-  <li><b>Prioridade na parte de cima:</b> peito, costas, ombros, braço, antebraço (rosca martelo) e abdômen. As pernas ficam com 1 exercício grande por dia (leg press no A, stiff no B), o suficiente para continuar evoluindo e caminhar tranquilo depois. Extensora, flexora e panturrilha saíram; se sobrar tempo, faça uma delas no fim.</li>
+  <li><b>Prioridade na parte de cima:</b> peito, costas, ombros, braço, antebraço (rosca martelo) e abdômen. Tríceps e bíceps entram nos dois treinos (12 séries de cada por semana); o tríceps é a maior parte do braço. As pernas ficam com 1 exercício grande por dia (leg press no A, stiff no B), o suficiente para continuar evoluindo e caminhar tranquilo depois. Extensora, flexora e panturrilha saíram; se sobrar tempo, faça uma delas no fim.</li>
   <li>No seletor "Aparelho ocupado?", o app deixa marcado o exercício que você mais fez naquele lugar (★ preferido), não o último. Uma troca de vez em quando, por máquina ocupada, não muda o preferido. O preferido é separado por dia: o do Treino A não vale para o B.</li>
   <li>Peso e repetições ficam gravados por dia e por exercício escolhido. O Peck Deck feito no A tem a própria sugestão de carga, diferente do Peck Deck feito no B. Na primeira vez num dia, o app parte do registro do outro dia, se houver.</li>
   <li>Cada treino trabalha o corpo todo, e você termina todas as séries de um exercício no mesmo aparelho antes de trocar.</li>
@@ -842,6 +971,7 @@ function guideHTML(){
 
 const tabsEl=$('tabs'),content=$('content');
 function render(){
+  _pc={};
   const nx=nextGym();
   tabsEl.innerHTML=[...DAYS.map(d=>({id:d.id,t:d.tab,s:'≈ '+estMin(d)+' min'})),{id:'G',t:'Guia',s:'evolução'}].map(t=>`<button type="button" class="tab" role="tab" id="tab-${t.id}" data-id="${t.id}" aria-selected="${S.view===t.id}">${t.t}<small>${t.id===nx?'<span class="nx">próximo</span>':t.s}</small></button>`).join('');
   content.innerHTML=S.view==='G'?guideHTML():dayHTML(dayById(S.view));
@@ -877,8 +1007,8 @@ content.addEventListener('click',e=>{
   if(act==='usew'){const p=P_(d.id);p.w[i]=p.w[i]||{};p.w[i][s]=+b.dataset.w;save();renderCard(d,i);return}
   if(act==='set')tapSet(d,i,s);
   else if(act==='cur'){P_(d.id).cur=i;save();render();$('ex-'+i).scrollIntoView({block:'start'})}
-  else if(act==='warm'){const p=P_(d.id);if(!p.start)p.start=Date.now();p.warm=true;startTimer(300,'Aquecimento','Bike ou esteira leve; depois 1 série leve do 1º exercício');render()}
-  else if(act==='warmok'){const p=P_(d.id);if(!p.start)p.start=Date.now();p.warm=true;save();render()}
+  else if(act==='warm'){const p=P_(d.id);startSession(d);p.warm=true;startTimer(300,'Aquecimento','Bike ou esteira leve; depois 1 série leve do 1º exercício');render()}
+  else if(act==='warmok'){const p=P_(d.id);startSession(d);p.warm=true;save();render()}
   else if(act==='export')exportFile();
   else if(act==='finish')finish(d);
   else if(act==='reset'){if(armed!=='reset'){armed='reset';b.textContent='Toque de novo para zerar';setTimeout(()=>{armed=null;const r=$('resetBtn');r&&(r.textContent='Zerar este treino')},3000);return}
