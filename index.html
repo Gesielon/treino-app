@@ -585,8 +585,8 @@ const START={supMaq:30,supino:30,peck:60,remada:50,pulley:50,cavalinho:24,rosca:
  extensora:55,flexora:40,pant:55,elev:8,desenv:24,tricorda:40,tripulley:40,triFrances:17.5,cruciHal:12.5};
 // Degrau de carga: halteres 1 kg; máquinas de anilha 2 kg (trocar anilha de 4 por 5 de cada lado); máquinas de pino e polias 5 kg.
 const DUMB=['elev','supinc','supHal','cruciHal','serrote','remCurvHal','desenvHal','triFrances','triTesta','roscaHal','martelo','roscaAlt','goblet','afundo','stiff','pantDegrau','rosca','arnold','elevSent','crucInvHal'];
-const PLATE=['legpress','legpressAlto','hack','supino','desenv','cavalinho'];
-// Supino na máquina e polias: 5 kg (pino); se for de anilha na sua academia, digite o valor.
+const PLATE=['legpress','legpressAlto','hack','supino','supMaq','desenv','cavalinho'];
+// Supino na máquina: anilhas nas laterais (2 kg). Polias e máquinas de pino: 5 kg.
 const STEP=k=>DUMB.includes(k)?1:PLATE.includes(k)?2:5;
 // Aumento sugerido: cerca de 5% da carga, arredondado ao degrau (no mínimo 1 degrau).
 const INC=(k,w)=>{const st=STEP(k);return Math.max(st,Math.round(w*0.05/st)*st)};
@@ -909,7 +909,7 @@ function guideHTML(){
    <br>= <b>Ficou dentro da faixa</b> → mantém a carga e tenta +1 repetição.
    <br>⬇ <b>1ª série abaixo do mínimo</b> → baixa 1 degrau. Se ficou 3 ou mais abaixo, baixa mais.</li>
   <li>No próximo treino, a 1ª série já vem com a carga sugerida. Cada série seguinte repete o peso da anterior; mude qualquer uma com + e − ou digitando.</li>
-  <li>Aumento sugerido: cerca de 5% da carga. Botões + e −: halteres 1 kg; leg press, hack, supino e desenvolvimento articulado e cavalinho 2 kg (trocar uma anilha de 4 por uma de 5 de cada lado); máquinas de pino e polias 5 kg. Se a máquina tiver outro degrau, digite o valor.</li>
+  <li>Aumento sugerido: cerca de 5% da carga. Botões + e −: halteres 1 kg; leg press, hack, supino articulado, supino na máquina, desenvolvimento articulado e cavalinho 2 kg (trocar uma anilha de 4 por uma de 5 de cada lado); máquinas de pino e polias 5 kg. Se a máquina tiver outro degrau, digite o valor.</li>
   <li>Nas máquinas de anilha, anote sempre do mesmo jeito (por exemplo, o total dos dois lados) para o app comparar certo.</li>
   <li>Carga inicial: as que você informou (você falha por volta da 10ª repetição). Nos exercícios novos, o campo vem vazio: escolha uma carga em que consiga o mínimo da faixa.</li></ul></div>
   <div class="note"><h3>Ordem e compensação</h3><ul>
