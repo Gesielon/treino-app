@@ -155,6 +155,23 @@ td:first-child{white-space:normal;min-width:120px}
 td.pos{color:var(--accent);font-weight:700} td.neg{color:var(--over);font-weight:700}
 .dot{font-size:.7rem;font-weight:700;padding:2px 7px;border-radius:999px;background:var(--bg)}
 .dot.up{background:var(--accent-soft);color:var(--accent)} .dot.down{background:var(--over-soft);color:var(--over)}
+.chk4{display:flex;flex-direction:column;gap:6px}
+.pchk{display:flex;align-items:center;gap:10px;text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:9px 10px;font-size:.88rem;font-weight:600}
+.pchk span{flex:none;width:24px;height:24px;border-radius:6px;border:2px solid var(--accent);display:grid;place-items:center;color:var(--on-accent);font-weight:800}
+.pchk.on{border-color:var(--accent);background:var(--accent-soft)} .pchk.on span{background:var(--accent)}
+.bwrow,.bwq{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.bwrow input,.bwq input,.hm input{font:inherit;font-weight:700;font-size:.95rem;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 9px;min-width:0}
+.bwrow input[type=text],.bwq input{width:90px}
+.hm{display:inline-flex;align-items:center;gap:6px;font-size:.85rem;color:var(--muted)} .hm input{width:72px;text-align:center;font-variant-numeric:tabular-nums}
+.hm input:invalid{border-color:var(--over)}
+.remrow{border-top:1px solid var(--line);margin-top:10px;padding-top:10px;display:flex;flex-direction:column;gap:6px}
+.tog{display:flex;align-items:center;gap:10px;font-weight:600;font-size:.9rem;cursor:pointer}
+.tog input{position:absolute;opacity:0;width:1px;height:1px}
+.tog span{flex:none;width:42px;height:24px;border-radius:999px;background:var(--line);position:relative;transition:background .15s}
+.tog span::after{content:"";position:absolute;top:3px;left:3px;width:18px;height:18px;border-radius:50%;background:var(--surface);transition:transform .15s}
+.tog input:checked+span{background:var(--accent)} .tog input:checked+span::after{transform:translateX(18px)}
+.tog input:focus-visible+span{outline:3px solid var(--accent);outline-offset:2px}
+a.prim{text-decoration:none;display:inline-block}
 /* cronômetro */
 .trem{max-width:720px;margin:0 auto 6px;font-size:.8rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;min-height:1.2em}
 .trem.late{color:var(--over)}
@@ -601,7 +618,7 @@ const FAILTXT={
  '1-2':['Pare 1–2 antes da falha','Halter perto do rosto ou do peito sem ajudante: falhar no meio da repetição é arriscado.'],
  '2-3':['Pare 2–3 antes da falha','Perna pesada ou lombar envolvida: a falha aqui cansa demais e aumenta o risco. Também garante a caminhada depois do treino.'],
  'casa':['Pare 3 antes da falha','Treino de casa é para manter o corpo ativo sem atrapalhar a academia.']};
-const failOf=(k,d)=>d.kind==='home'?'casa':(FAIL[k]||'sim');
+const failOf=(k,d)=>d.kind==='home'?'casa':(typeof deloadOn==='function'&&deloadOn())?'2-3':(FAIL[k]||'sim');
 
 const range=s=>{const m=s.match(/(\d+)(?:–(\d+))?/);return [+m[1],+(m[2]||m[1])]};
 const isSec=s=>/s$/.test(s);
@@ -614,9 +631,9 @@ function estMin(d){const pl=planOf(d);let t=d.kind==='gym'?300:0;d.items.forEach
 
 // ---- estado (salvo só neste aparelho) ----
 const KEY='treino-abcd-v2';
-let S={prog:{},hist:[],exlog:{},varCount:{},order:{},debt:null,sound:true,timer:null,view:null,updatedAt:0,ver:4};
+let S={prog:{},hist:[],exlog:{},varCount:{},order:{},debt:null,off:[],bw:[],deload:null,deloadSnooze:'',stallReset:'',win:null,wakeAt:'06:30',rem:{},lastBackup:'',firstUse:'',prot:{},sound:true,timer:null,view:null,updatedAt:0,ver:4};
 try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v&&typeof v==='object')S=Object.assign(S,v)}catch(e){}
-S.exlog=S.exlog||{};S.varCount=S.varCount||{};S.order=S.order||{};
+S.exlog=S.exlog||{};S.varCount=S.varCount||{};S.order=S.order||{};S.off=S.off||[];S.bw=S.bw||[];S.rem=S.rem||{};S.prot=S.prot||{};if(!S.firstUse)S.firstUse=new Date().toISOString().slice(0,10);
 // Treinos mudaram nesta versão: descarta treino em andamento da versão antiga (histórico fica).
 if(S.ver!==4){S.prog={};S.timer=null;S.ver=4}
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
@@ -624,6 +641,31 @@ const P_=id=>{const p=(S.prog[id]=S.prog[id]||{sets:{},vars:{},cur:0,warm:false,
 const dayById=id=>DAYS.find(d=>d.id===id);
 function nextGym(){const h=[...S.hist].reverse().find(x=>ROT.includes(x.d));return h?ROT[(ROT.indexOf(h.d)+1)%ROT.length]:'A'}
 if(!S.view||!dayById(S.view)&&S.view!=='G'){const act=Object.keys(S.prog).find(k=>dayById(k)&&S.prog[k].start);S.view=act||nextGym()}
+
+// ---- datas, feriados e dias de treino (segunda a sexta) ----
+const pISO=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
+const toISO=t=>t.getFullYear()+'-'+String(t.getMonth()+1).padStart(2,'0')+'-'+String(t.getDate()).padStart(2,'0');
+const addD=(s,n)=>{const t=pISO(s);t.setDate(t.getDate()+n);return toISO(t)};
+const diffD=(a,b)=>Math.round((pISO(b)-pISO(a))/864e5);
+function easter(y){const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,m=Math.floor((a+11*h+22*l)/451),mo=Math.floor((h+l-7*m+114)/31),da=((h+l-7*m+114)%31)+1;return toISO(new Date(y,mo-1,da))}
+// Feriados nacionais + Carnaval e Corpus Christi (pontos facultativos no calendário nacional, tratados como folga).
+const _hol={};
+function holidays(y){if(_hol[y])return _hol[y];const H={},e=easter(y);
+  [['01-01','Confraternização Universal'],['04-21','Tiradentes'],['05-01','Dia do Trabalho'],['09-07','Independência'],['10-12','Nossa Senhora Aparecida'],['11-02','Finados'],['11-15','Proclamação da República'],['11-20','Dia da Consciência Negra'],['12-25','Natal']].forEach(([md,n])=>H[y+'-'+md]=n);
+  H[addD(e,-48)]='Carnaval';H[addD(e,-47)]='Carnaval';H[addD(e,-2)]='Sexta-feira Santa';H[addD(e,60)]='Corpus Christi';
+  return _hol[y]=H}
+const holidayName=s=>holidays(+s.slice(0,4))[s]||'';
+const isWeekday=s=>{const w=pISO(s).getDay();return w>=1&&w<=5};
+const isTrainDay=s=>isWeekday(s)&&!holidayName(s)&&!S.off.includes(s);
+const gymHist=()=>S.hist.filter(x=>ROT.includes(x.d));
+const lastGymDate=()=>{const g=gymHist();return g.length?g[g.length-1].date:''};
+// Dias de treino sem registro entre o último treino e ontem.
+function missedDays(){const last=lastGymDate();if(!last)return 0;let n=0;for(let s=addD(last,1);s<today();s=addD(s,1))if(isTrainDay(s))n++;return n}
+// Volta depois de 7+ dias sem academia: cargas sugeridas 10% menores no 1º treino.
+const gapDays=()=>{const l=lastGymDate();return l?diffD(l,today()):0};
+const returnMode=()=>gapDays()>=7;
+// Semana leve (deload)
+const deloadOn=()=>!!(S.deload&&today()<S.deload.until);
 
 // ---- plano do dia: ordem e séries ----
 // 1) Ordem: a mesma em que você fez esse treino da última vez.
@@ -635,7 +677,8 @@ function computePlan(d){
   let order=[...Array(n).keys()];
   const last=S.order[d.id];
   if(last&&last.length){const pos=ex=>{const k=last.indexOf(ex);return k<0?999:k};order.sort((a,b)=>pos(d.items[a].ex)-pos(d.items[b].ex)||a-b)}
-  const debt=d.kind==='gym'&&S.debt?S.debt.items:[],tot={},front=[],noSlot=[],noTime=[];
+  if(d.kind==='gym'&&deloadOn()){d.items.forEach((it,k)=>{sets[k]=Math.min(2,it.sets)});notes.push(`<b>Semana leve até ${br(addD(S.deload.until,-1))}:</b> 2 séries por exercício, mesma carga, parando 2 a 3 repetições antes da falha.`)}
+  const debt=d.kind==='gym'&&S.debt&&!deloadOn()?S.debt.items:[],tot={},front=[],noSlot=[],noTime=[];
   debt.forEach(x=>{tot[x.g]=(tot[x.g]||0)+x.miss});
   // Tempo: usa primeiro a folga até 55 min (com 3 min de margem para esperar aparelho); depois tira séries de exercícios pequenos.
   const secs=()=>{let t=d.kind==='gym'?300:0;d.items.forEach((it,k)=>{t+=sets[k]*45+(sets[k]-1)*it.rest+(k?TRANS[d.kind]:0)});return t};
@@ -704,7 +747,8 @@ function evaluate(key,it,sets,pre){
 // Histórico separado por dia e por exercício escolhido: o Peck Deck no A tem a própria carga, diferente do Peck Deck no B.
 // Se ainda não houver registro naquele dia, usa o do outro dia como ponto de partida.
 const lastLog=(key,day,strict)=>{const l=S.exlog[key]||[];for(let j=l.length-1;j>=0;j--)if(l[j].day===day)return l[j];return strict||!l.length?null:l[l.length-1]};
-function sugW(key,day){const l=lastLog(key,day);if(l&&l.ev&&l.ev.w!==''&&l.ev.w!=null)return l.ev.w;return START[key]??''}
+function sugW(key,day){const l=lastLog(key,day);let w=(l&&l.ev&&l.ev.w!==''&&l.ev.w!=null)?l.ev.w:(START[key]??'');
+  if(w!==''&&l&&returnMode())w=Math.max(0,roundStep(key,+w*0.9));return w}
 // Peso da série: o que você digitou; senão, o da série anterior; na 1ª, a carga sugerida.
 function wAt(p,i,s,key,day){for(let k=s;k>=0;k--){const v=p.w[i]?.[k];if(v!==undefined)return v}return sugW(key,day)}
 // Algum exercício feito antes, hoje, cansou o músculo deste? (só exercício pequeno antes de um que usa o mesmo músculo)
@@ -713,10 +757,11 @@ function preOf(d,i){const p=P_(d.id),me=d.items[i].ex,hits=HITS[me]||[GRP[me]];
 function logExercise(d,i){
   const p=P_(d.id),it=itemOf(d,i),key=exKey(d,i),[mn]=range(it.reps);
   const sets=[];for(let s=0;s<it.sets;s++)sets.push({w:BW.includes(key)?'':wAt(p,i,s,key,d.id),r:p.r[i]?.[s]??mn});
-  const ev=evaluate(key,it,sets,preOf(d,i)),date=today();
+  const dl=d.kind==='gym'&&deloadOn();
+  const ev=dl?{dir:'keep',w:BW.includes(key)?'':sets[0].w,msg:'Semana leve: carga mantida. Na semana seguinte, volta a progressão normal.'}:evaluate(key,it,sets,preOf(d,i)),date=today();
   const L=(S.exlog[key]=S.exlog[key]||[]);
   if(L.length&&L[L.length-1].date===date&&L[L.length-1].day===d.id)L.pop();
-  L.push({date,day:d.id,sets,ev});S.exlog[key]=L.slice(-20);touch();
+  L.push({date,day:d.id,sets,ev,...(dl?{deload:1}:{})});S.exlog[key]=L.slice(-20);touch();
 }
 
 // ---- som, vibração e tela ligada ----
@@ -795,14 +840,27 @@ function tapSet(d,i,s){
 }
 function renderCard(d,i){const el=$('ex-'+i);if(el)el.outerHTML=card(d,i);else render()}
 // Ao finalizar: guarda a ordem que você fez e o que ficou faltando (para compensar no próximo treino).
-function finish(d){
-  if(d.kind==='gym'){const p=P_(d.id),pl=planOf(d),miss=[];
-    d.items.forEach((it,i)=>{const m=pl.sets[i]-(p.sets[i]||0);if(m>0)miss.push({g:GRP[it.ex],ex:it.ex,miss:m})});
-    const items=[...miss,...(pl.carry||[]).filter(x=>!miss.some(y=>y.g===x.g))];
-    S.debt=items.length?{date:today(),from:d.id,items}:null;
-    if(p.seq&&p.seq.length)S.order[d.id]=p.seq.map(i=>d.items[i].ex)}
-  S.hist.push({d:d.id,date:today()});S.hist=S.hist.slice(-80);touch();delete S.prog[d.id];stopTimer();
+// Fecha o treino. Gym: com menos de 1/3 das séries feitas, o treino não conta e o próximo é o mesmo.
+function finishCore(d,date){
+  const p=P_(d.id),pl=planOf(d);let tot=0,done=0;
+  d.items.forEach((it,i)=>{tot+=pl.sets[i];done+=Math.min(p.sets[i]||0,pl.sets[i])});
+  let msg='';
+  if(d.kind==='gym'){
+    if(done===0)msg=`${d.title} sem nenhuma série: não contou. O próximo continua sendo o Treino ${nextGym()}.`;
+    else if(done<tot/3)msg=`${d.title} com menos de 1/3 das séries (${done} de ${tot}): não contou. O próximo continua sendo o Treino ${nextGym()}, completo.`;
+    else{const miss=[];
+      d.items.forEach((it,i)=>{const m=pl.sets[i]-(p.sets[i]||0);if(m>0)miss.push({g:GRP[it.ex],ex:it.ex,miss:m})});
+      const items=[...miss,...(pl.carry||[]).filter(x=>!miss.some(y=>y.g===x.g))];
+      S.debt=deloadOn()?null:(items.length?{date,from:d.id,items}:null);
+      if(p.seq&&p.seq.length)S.order[d.id]=p.seq.map(i=>d.items[i].ex);
+      S.hist.push({d:d.id,date});}
+  }else if(done>0)S.hist.push({d:d.id,date});
+  S.hist=S.hist.slice(-120);delete S.prog[d.id];return msg}
+function finish(d){const m=finishCore(d,today());S.flash=m;touch();stopTimer();
   if(d.kind==='gym')S.view=nextGym();save();render();window.scrollTo({top:0})}
+// Treino começado num dia anterior e não finalizado: fecha sozinho com a data em que foi feito.
+function autoClose(){let any=false;DAYS.forEach(d=>{const p=S.prog[d.id];if(p&&p.start&&toISO(new Date(p.start))<today()){const m=finishCore(d,toISO(new Date(p.start)));if(m)S.flash=m;any=true}});
+  if(any){if(S.timer)S.timer=null;touch()}}
 
 // ---- sugestão de troca ----
 // Tipo de movimento de cada exercício, para checar o equilíbrio da semana.
@@ -818,11 +876,11 @@ function didTag(tag,since){return Object.keys(S.exlog).some(k=>TAG[k]===tag&&S.e
 const perf=(k,x)=>BW.includes(k)?x.sets.reduce((s,y)=>s+(+y.r||0),0):(+x.sets[0].w||0)*(1+(+x.sets[0].r||0)/30);
 const STALL=()=>Math.min(10,Math.max(2,+S.stallN||3));
 // Estagnou: nos últimos N treinos daquele exercício naquele dia, nenhum superou o primeiro deles.
-function stalled(k,day){const N=STALL(),L=(S.exlog[k]||[]).filter(x=>x.day===day).slice(-N);if(L.length<N)return false;
+function stalled(k,day){const N=STALL(),L=(S.exlog[k]||[]).filter(x=>x.day===day&&!x.deload&&(!S.stallReset||x.date>=S.stallReset)).slice(-N);if(L.length<N)return false;
   const p=L.map(x=>perf(k,x));return p.slice(1).every(v=>v<=p[0])}
-function stallAdvice(n){const sem=(n/2).toLocaleString('pt-BR');
+function stallAdvice(n){const sem=(n/2.5).toLocaleString('pt-BR',{maximumFractionDigits:1});
   if(n<=2)return ['low',`Baixo. Dois treinos ruins podem ser só cansaço ou sono, e o app vai sugerir troca cedo demais. Recomendado: 3 a 4.`];
-  if(n<=4)return ['ok',`Bom. Cada exercício aparece 2 vezes por semana, então isso dá cerca de ${sem} semanas sem evoluir antes do aviso.`];
+  if(n<=4)return ['ok',`Bom. Cada exercício aparece 2 a 3 vezes por semana, então isso dá cerca de ${sem} semanas sem evoluir antes do aviso.`];
   if(n===5)return ['mid',`Um pouco alto: cerca de ${sem} semanas sem evoluir antes do aviso. Recomendado: 3 a 4.`];
   return ['high',`Alto. Você ficaria cerca de ${sem} semanas parado no mesmo exercício antes do aviso. Recomendado: 3 a 4.`]}
 // Devolve até 3 opções da lista do cartão, da melhor para a pior, e o motivo.
@@ -875,9 +933,31 @@ function card(d,i){
   if(!cur)h+=`<div class="crow"><button type="button" class="linkbtn" data-act="cur" data-i="${i}">Fazer este agora</button></div>`;
   return h+'</article>';
 }
+// ---- avisos (aparecem dentro do seu horário de treino) ----
+const HM=/^([01]\d|2[0-3]):[0-5]\d$/;
+const mins=s=>+s.slice(0,2)*60+ +s.slice(3);
+function inWin(){if(!S.win||!HM.test(S.win.a||'')||!HM.test(S.win.b||''))return true;const t=new Date(),n=t.getHours()*60+t.getMinutes(),a=mins(S.win.a),b=mins(S.win.b);return a<=b?(n>=a&&n<=b):(n>=a||n<=b)}
+const monday=s=>{const w=(pISO(s).getDay()+6)%7;return addD(s,-w)};
+const bwThisWeek=()=>S.bw.some(x=>x.date>=monday(today()));
+function stalledCount(){let n=0;DAYS.filter(d=>d.kind==='gym').forEach(d=>d.items.forEach((_,i)=>{if(stalled(exKey(d,i),d.id))n++}));return n}
+function notices(view){
+  const out=[],td=today(),win=inWin(),gym=dayById(view)&&dayById(view).kind==='gym';
+  if(S.flash)out.push(`<div class="ev swap">${S.flash}</div>`);
+  if(gym&&returnMode())out.push(`<div class="ev down"><b>Primeiro treino depois de ${gapDays()} dias.</b> As cargas sugeridas estão cerca de 10% menores para o corpo se readaptar. No próximo treino, a progressão volta ao normal.</div>`);
+  if(gym&&deloadOn())out.push(`<div class="ev swap"><b>Semana leve até ${br(addD(S.deload.until,-1))}.</b> 2 séries por exercício, mesma carga, parando 2 a 3 repetições antes da falha.</div>`);
+  if(!win)return out.join('');
+  const hol=holidayName(td),last=lastGymDate(),mis=missedDays(),doneToday=S.hist.some(x=>x.date===td&&ROT.includes(x.d)),started=ROT.some(id=>S.prog[id]&&S.prog[id].start);
+  if(isTrainDay(td)&&!doneToday&&!started)out.push(`<div class="ev up"><b>Hoje é dia de treino: Treino ${nextGym()}.</b>${last?` Último treino: ${br(last)}.`:''}${mis?` Você faltou ${mis} dia${mis>1?'s':''} de treino; seguimos do Treino ${nextGym()}, sem séries extras.`:''} <button type="button" class="linkbtn" data-act="dayoff">Hoje é folga</button></div>`);
+  else if(!isWeekday(td)||hol||S.off.includes(td))out.push(`<div class="ev">${hol?`Feriado: ${hol}. `:S.off.includes(td)?'Hoje marcado como folga. ':''}Dia de descanso ou treino em casa.${S.off.includes(td)?' <button type="button" class="linkbtn" data-act="dayon">Desfazer folga</button>':''}</div>`);
+  if(!bwThisWeek())out.push(`<div class="ev up"><b>Pesagem da semana.</b> Anote o peso de segunda de manhã (em jejum). <span class="bwq"><input type="text" inputmode="decimal" id="bwQuick" placeholder="ex.: 85,2" aria-label="Peso em kg"> kg <button type="button" class="prim" data-act="bwsave" data-src="bwQuick">Salvar</button></span></div>`);
+  if(!deloadOn()&&!(S.deloadSnooze&&td<S.deloadSnooze)){const n=stalledCount();if(n>=3)out.push(`<div class="ev down"><b>${n} exercícios estagnados ao mesmo tempo.</b> Isso costuma ser cansaço acumulado. Sugestão: uma semana leve (2 séries por exercício, mesma carga, parando 2 a 3 antes da falha) e depois volta ao normal. <span class="actions" style="margin-top:6px"><button type="button" class="prim" data-act="deloadyes">Fazer semana leve</button><button type="button" class="ghostbtn" data-act="deloadno">Agora não</button></span></div>`)}
+  if(!inClaude()){const ref=S.lastBackup||S.firstUse;if(ref&&diffD(ref,td)>=14&&Object.keys(S.exlog).length)out.push(`<div class="ev down"><b>Hora do backup.</b> ${S.lastBackup?`O último foi em ${br(S.lastBackup)}.`:'Você ainda não fez nenhum.'} Seus treinos ficam só neste celular. <button type="button" class="linkbtn" data-act="export">Fazer backup agora</button></div>`)}
+  return out.join('');
+}
 function dayHTML(d){
   const p=P_(d.id),pl=planOf(d),total=d.items.length,doneN=d.items.filter((it,i)=>(p.sets[i]||0)>=pl.sets[i]).length;
   let h=`<section class="list"><div class="dayhead"><div><h2>${d.title}</h2><p>${d.kind==='gym'?'Corpo inteiro · ':'Dias sem academia · '}≈ ${estMin(d)} min · ${doneN} de ${total} feitos</p></div><span class="sess" id="sessClock"></span></div>`;
+  h+=notices(d.id);
   if(d.kind==='gym')h+=`<div class="legend"><span><i style="background:var(--ghost)"></i>início</span><span><i style="background:var(--ink)"></i>fim</span><span><i style="background:var(--accent)"></i>movimento</span></div>`;
   if(d.kind==='gym')h+=`<div class="warm${p.warm?' ok':''}"><span><b>Aquecimento · 5 min</b><br>Bike ou esteira leve + 1 série leve do 1º exercício.</span>${p.warm?'<span class="badge ok">✓ Feito</span>':`<span class="actions"><button type="button" class="prim" data-act="warm">Iniciar 5 min</button><button type="button" class="ghostbtn" data-act="warmok">Já fiz</button></span>`}</div>`;
   if(pl.notes.length)h+=`<div class="ev swap"><b>Treino ajustado hoje</b><ul class="adj">${pl.notes.map(x=>`<li>${x}</li>`).join('')}</ul></div>`;
@@ -899,9 +979,13 @@ function evoHTML(){
 }
 function guideHTML(){
   const last=[...S.hist].reverse().find(x=>ROT.includes(x.d));
-  const days=[['Seg','A',1],['Ter','B',1],['Qua','Bike ou casa',0],['Qui','A',1],['Sex','B',1],['Sáb','Casa + bike',0],['Dom','Descanso',0]];
+  const days=[['Seg','A/B',1],['Ter','A/B',1],['Qua','A/B',1],['Qui','A/B',1],['Sex','A/B',1],['Sáb','Casa + bike',0],['Dom','Descanso',0]];
   return `<section class="list"><div class="dayhead"><div><h2>Guia</h2><p>${last?`Último treino: ${last.d} em ${br(last.date)} · `:''}Próximo: ${nextGym()}</p></div></div>
+  ${notices('G')}
+  ${protHTML()}
+  ${bwHTML()}
   ${evoHTML()}
+  ${remHTML()}
   <div class="note"><h3>Como o app ajusta a carga</h3><ul>
   <li>Cada exercício tem uma faixa de repetições (ex.: 8–12). Em cada série, ajuste o peso e quantas repetições você fez e toque em <b>Feita</b>.</li>
   <li>Ao terminar a última série, o app olha a <b>1ª série</b>, que é a mais forte:
@@ -923,7 +1007,8 @@ function guideHTML(){
   <li><b>Estagnou:</b> se um exercício passou o número de treinos abaixo, naquele dia, sem evoluir na carga nem nas repetições, o app sugere outra opção da lista por algumas semanas. Conta treinos daquele exercício, não dias do calendário.</li>
   <li><div class="basew"><span>Treinos sem evoluir para sugerir troca</span>${(()=>{const n=STALL();return `<div class="stp" style="width:150px"><button type="button" data-act="stall-" aria-label="Diminuir">−</button><input type="text" id="stallN" value="${n}" readonly aria-label="Treinos sem evoluir"><span class="u">treinos</span><button type="button" data-act="stall+" aria-label="Aumentar">+</button></div>`})()}</div>
    ${(()=>{const [lv,t]=stallAdvice(STALL());return `<div class="ev ${lv==='ok'?'up':'down'}" style="margin-top:6px">${t}</div>`})()}</li>
-  <li>É só uma sugestão: a escolha continua sendo sua, e o ★ preferido só muda se você usar a outra opção mais vezes.</li></ul></div>
+  <li>É só uma sugestão: a escolha continua sendo sua, e o ★ preferido só muda se você usar a outra opção mais vezes.</li>
+  <li><b>Semana leve:</b> se 3 ou mais exercícios estagnarem ao mesmo tempo, o app sugere uma semana mais leve. Muitos treinadores usam isso; os estudos ainda não são conclusivos. Depois dela, a contagem de estagnação recomeça do zero.</li></ul></div>
   <div class="note"><h3>Repetições demais ou de menos</h3><ul>
   <li>Se a 1ª série passar 3 ou mais repetições do máximo da faixa (ex.: 70 repetições no abdominal, com faixa de 12–20), o app sugere um aumento maior de carga, calculado pelas repetições que você fez.</li>
   <li>Se ficar 3 ou mais abaixo do mínimo, sugere baixar a carga do mesmo jeito.</li>
@@ -939,14 +1024,19 @@ function guideHTML(){
   <li><b>${FAILTXT['2-3'][0]}:</b> leg press, hack, agachamento, afundo, stiff e remada cavalinho. ${FAILTXT['2-3'][1]}</li>
   <li>Os estudos mostram ganho de músculo parecido treinando perto da falha ou até a falha, mas a falha em todas as séries cansa mais. Por isso o app sugere a falha só na última série, nos exercícios seguros.</li>
   <li>Cada cartão mostra a regra daquele exercício na etiqueta ao lado do descanso.</li></ul></div>
-  <div class="note"><h3>Semana sugerida</h3><div class="week">${days.map(x=>`<div class="${x[2]?'g':''}">${x[0]}<b>${x[1].length<3?x[1]:''}</b>${x[1].length<3?'':x[1]}</div>`).join('')}</div>
+  <div class="note"><h3>Semana sugerida</h3><div class="week">${days.map(x=>`<div class="${x[2]?'g':''}">${x[0]}<b>${x[1].length<4?x[1]:''}</b>${x[1].length<4?'':x[1]}</div>`).join('')}</div>
   <ul><li>Os treinos se alternam: <b>A → B → A → B</b>. Faltou por feriado? Continue de onde parou; a aba com a etiqueta "próximo" mostra qual é.</li>
-  <li>Cada exercício aparece 2 vezes por semana. Assim o app ajusta a carga mais rápido e você aprende a técnica mais depressa.</li>
+  <li>Cada exercício aparece 2 a 3 vezes por semana. Assim o app ajusta a carga mais rápido e você aprende a técnica mais depressa.</li>
   <li><b>Prioridade na parte de cima:</b> peito, costas, ombros, braço, antebraço (rosca martelo) e abdômen. Tríceps e bíceps entram nos dois treinos (12 séries de cada por semana); o tríceps é a maior parte do braço. As pernas ficam com 1 exercício grande por dia (leg press no A, stiff no B), o suficiente para continuar evoluindo e caminhar tranquilo depois. Extensora, flexora e panturrilha saíram; se sobrar tempo, faça uma delas no fim.</li>
   <li>No seletor "Aparelho ocupado?", o app deixa marcado o exercício que você mais fez naquele lugar (★ preferido), não o último. Uma troca de vez em quando, por máquina ocupada, não muda o preferido. O preferido é separado por dia: o do Treino A não vale para o B.</li>
   <li>Peso e repetições ficam gravados por dia e por exercício escolhido. O Peck Deck feito no A tem a própria sugestão de carga, diferente do Peck Deck feito no B. Na primeira vez num dia, o app parte do registro do outro dia, se houver.</li>
   <li>Cada treino trabalha o corpo todo, e você termina todas as séries de um exercício no mesmo aparelho antes de trocar.</li>
-  <li>Com 4 treinos por semana, você não perde músculo nos dias sem academia. O treino de casa (cerca de 12 min) é um extra opcional.</li>
+  <li>Academia de segunda a sexta, alternando A e B (A, B, A, B, A; na semana seguinte começa pelo B). Sábado: casa e bike, se quiser. Domingo: descanso.</li>
+  <li><b>Faltou?</b> O app percebe sozinho pela data. Ele continua do treino em que você parou, sem séries extras: uma falta de vez em quando não atrapalha o ganho de massa, e espremer o treino perdido no seguinte só aumenta o cansaço.</li>
+  <li><b>Fez só uma parte:</b> com menos de 1/3 das séries, o treino não conta e o próximo é o mesmo. Com 1/3 ou mais, conta, e o seguinte compensa o que faltou (sem passar de 55 min).</li>
+  <li><b>Treino esquecido aberto:</b> se você começou e não finalizou, no dia seguinte o app fecha sozinho com essa regra.</li>
+  <li><b>Pausa de 7 dias ou mais:</b> no primeiro treino de volta, as cargas sugeridas vêm cerca de 10% menores (regra prática usada por treinadores, não um número exato de estudo).</li>
+  <li><b>Feriados:</b> os nacionais são reconhecidos sozinhos, inclusive Carnaval, Sexta-feira Santa e Corpus Christi (estes dois, Carnaval e Corpus Christi, são pontos facultativos no calendário nacional; o app trata como folga). Feriados de Barueri e outras folgas: toque em "Hoje é folga" no aviso do dia.</li>
   <li>Nos dias sem academia, a bike de 30 min em ritmo moderado pode continuar. Na véspera de treino, se as pernas estiverem pesadas, pedale mais leve. Domingo é descanso total.</li></ul></div>
   <div class="note"><h3>Como usar o cronômetro</h3><ol>
   <li>Toque em <b>Feita</b> ao terminar uma série. O descanso começa sozinho.</li>
@@ -994,6 +1084,7 @@ function curVal(d,act,i,s){const p=P_(d.id),key=exKey(d,i),[mn]=range(d.items[i]
 content.addEventListener('click',e=>{
   const b=e.target.closest('button[data-act]');if(!b)return;
   const d=dayById(S.view),act=b.dataset.act,i=+b.dataset.i,s=+b.dataset.s;
+  if(S.flash&&act!=='set'){S.flash=''}
   if(/^(w|r)[+-]$/.test(act)){
     const f=act.slice(0,-1),sign=act.endsWith('+')?1:-1,key=exKey(d,i);
     const st=f==='r'?(isSec(d.items[i].reps)?5:1):STEP(key);
@@ -1002,6 +1093,17 @@ content.addEventListener('click',e=>{
     if(f==='w')renderCard(d,i);else{const inp=$(`${f}-${i}-${s}`);inp&&(inp.value=kg(nv))}
     return;
   }
+  if(act==='dayoff'){if(!S.off.includes(today()))S.off.push(today());S.off=S.off.slice(-60);touch();render();return}
+  if(act==='dayon'){S.off=S.off.filter(x=>x!==today());touch();render();return}
+  if(act==='bwsave'){const v=num(($(b.dataset.src)||{}).value);if(v===''||v<30||v>250){const el=$(b.dataset.src);el&&el.focus();return}
+    const dt=($('bwDate')&&b.dataset.src==='bwInput'&&$('bwDate').value)||today();S.bw=S.bw.filter(x=>x.date!==dt);S.bw.push({date:dt,kg:v});S.bw.sort((x,y)=>x.date<y.date?-1:1);S.bw=S.bw.slice(-104);touch();render();return}
+  if(act==='bwdel'){S.bw=S.bw.filter(x=>x.date!==b.dataset.date);touch();render();return}
+  if(act==='deloadyes'){S.deload={start:today(),until:addD(today(),7)};S.stallReset=addD(today(),7);touch();render();return}
+  if(act==='deloadno'){S.deloadSnooze=addD(today(),7);touch();render();return}
+  if(act==='deloadstop'){S.deload=null;touch();render();return}
+  if(act==='prot'){const t=today(),k=+b.dataset.k,a2=(S.prot[t]=S.prot[t]||[0,0,0,0]);a2[k]=a2[k]?0:1;const ks=Object.keys(S.prot).sort();if(ks.length>60)delete S.prot[ks[0]];touch();renderProt();return}
+  if(act==='remics'){shareICS(b.dataset.k);return}
+  if(act==='remclear'){delete S.rem[b.dataset.k];touch();render();return}
   if(act==='stall+'||act==='stall-'){S.stallN=STALL()+(act==='stall+'?1:-1);S.stallN=STALL();touch();render();return}
   if(act==='swap'){P_(d.id).vars[i]=b.dataset.k;delete P_(d.id).w[i];save();renderCard(d,i);return}
   if(act==='usew'){const p=P_(d.id);p.w[i]=p.w[i]||{};p.w[i][s]=+b.dataset.w;save();renderCard(d,i);return}
@@ -1014,23 +1116,26 @@ content.addEventListener('click',e=>{
   else if(act==='reset'){if(armed!=='reset'){armed='reset';b.textContent='Toque de novo para zerar';setTimeout(()=>{armed=null;const r=$('resetBtn');r&&(r.textContent='Zerar este treino')},3000);return}
     armed=null;delete S.prog[d.id];stopTimer();render()}
   else if(act==='wipe'){if(armed!=='wipe'){armed='wipe';b.textContent='Toque de novo para apagar';setTimeout(()=>{armed=null;const r=$('wipeBtn');r&&(r.textContent='Apagar histórico deste celular')},3000);return}
-    armed=null;S.hist=[];S.prog={};S.exlog={};S.varCount={};touch();stopTimer();render()}
+    armed=null;S.hist=[];S.prog={};S.exlog={};S.varCount={};S.order={};S.debt=null;S.bw=[];S.prot={};S.deload=null;touch();stopTimer();render()}
 });
 content.addEventListener('change',e=>{
   const t=e.target,d=dayById(S.view);if(!d)return;
   if(t.matches('select[data-act=var]')){if(P_(d.id).sets[+t.dataset.i])return;P_(d.id).vars[+t.dataset.i]=t.value;const p=P_(d.id);delete p.w[+t.dataset.i];save();renderCard(d,+t.dataset.i);return}
   if(t.matches('input[data-act]')){const f=t.dataset.act,i=+t.dataset.i,s=+t.dataset.s,v=num(t.value);
     setVal(d,f,i,s,v);
-    if(f==='w')renderCard(d,i);else t.value=kg(v)}
+    if(f==='w')setTimeout(()=>renderCard(d,i),0);else t.value=kg(v)}
 });
 content.addEventListener('focusin',e=>{if(e.target.matches('input[data-act]'))setTimeout(()=>{try{e.target.select()}catch(_){}},0)});
 // ---- conta Claude (histórico) e backup em arquivo ----
 let DB=null,DOC=null,syncState='off',syncAt=0,syncT=null;
+const SYNC=['exlog','hist','varCount','order','debt','off','bw','deload','deloadSnooze','stallReset','win','wakeAt','rem','lastBackup','firstUse','prot','stallN'];
+const pickSync=()=>{const o={};SYNC.forEach(k=>o[k]=S[k]);return o};
+function applySync(o){SYNC.forEach(k=>{if(o[k]!==undefined)S[k]=o[k]});S.exlog=S.exlog||{};S.hist=S.hist||[];S.varCount=S.varCount||{};S.order=S.order||{};S.off=S.off||[];S.bw=S.bw||[];S.rem=S.rem||{};S.prot=S.prot||{}}
 function syncText(){if(!inClaude())return 'Salvo neste celular.';return syncState==='ok'?`Salvo na sua conta ✓${syncAt?' · '+new Date(syncAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}`:syncState==='saving'?'Salvando na sua conta…':syncState==='err'?'Não consegui salvar na conta agora. Seus dados continuam neste celular; baixe um backup.':'Salvo neste celular. A cópia na conta não está disponível agora.'}
 function showSync(){const el=$('syncStatus');el&&(el.textContent=syncText())}
 function touch(){S.updatedAt=Date.now();save();if(DOC){clearTimeout(syncT);syncT=setTimeout(push,1500)}}
 async function push(){if(!DOC)return;syncState='saving';showSync();
-  try{await DOC.set({exlog:JSON.stringify(S.exlog),hist:JSON.stringify(S.hist),varCount:JSON.stringify(S.varCount),stallN:STALL(),updatedAt:S.updatedAt});syncState='ok';syncAt=Date.now()}catch(e){syncState='err'}showSync()}
+  try{await DOC.set({data:JSON.stringify(pickSync()),stallN:STALL(),updatedAt:S.updatedAt});syncState='ok';syncAt=Date.now()}catch(e){syncState='err'}showSync()}
 (async()=>{try{
   if(!window.claude||!claude.use)return;
   const [db,user]=await Promise.all([claude.use('db'),claude.use('user')]);
@@ -1038,32 +1143,99 @@ async function push(){if(!DOC)return;syncState='saving';showSync();
   DB=db;DOC=db.doc('data/users/'+uid+'/treino');
   const snap=await Promise.race([DOC.get(),new Promise((_,r)=>setTimeout(()=>r(new Error('timeout')),10000))]);
   const r=snap.exists?snap.data():null;
-  if(r&&(+r.updatedAt||0)>(S.updatedAt||0)){try{S.exlog=JSON.parse(r.exlog||'{}');S.hist=JSON.parse(r.hist||'[]');S.varCount=JSON.parse(r.varCount||'{}');if(r.stallN)S.stallN=+r.stallN;S.updatedAt=+r.updatedAt;save();render()}catch(e){}syncState='ok';syncAt=+r.updatedAt}
+  if(r&&(+r.updatedAt||0)>(S.updatedAt||0)){try{if(r.data)applySync(JSON.parse(r.data));else{S.exlog=JSON.parse(r.exlog||'{}');S.hist=JSON.parse(r.hist||'[]');S.varCount=JSON.parse(r.varCount||'{}')}if(r.stallN)S.stallN=+r.stallN;S.updatedAt=+r.updatedAt;save();render()}catch(e){}syncState='ok';syncAt=+r.updatedAt}
   else if((S.updatedAt||0)>((r&&+r.updatedAt)||0))await push();
   else{syncState='ok';syncAt=r?+r.updatedAt:0}
   showSync();
 }catch(e){syncState=DOC?'err':'off';showSync()}})();
 const inClaude=()=>!window.STANDALONE;
 async function exportFile(){
-  const data=JSON.stringify({app:'treino-abcd',v:3,exportado:new Date().toISOString(),exlog:S.exlog,hist:S.hist,varCount:S.varCount,stallN:STALL(),updatedAt:S.updatedAt},null,1);
-  const name='backup-treino-'+today()+'.json',msg=$('bkMsg');
+  const data=JSON.stringify({app:'treino-abcd',v:4,exportado:new Date().toISOString(),...pickSync(),updatedAt:S.updatedAt},null,1);
+  const name='backup-treino-'+today()+'.json',msg=$('bkMsg');const okBackup=()=>{S.lastBackup=today();touch();if(S.view!=='G')render()};
   if(inClaude()){
     try{const dl=await window.claude.use('downloads');if(!dl){msg.textContent='Não dá para baixar arquivos nesta tela.';return}
-      await dl.save({filename:name,data});msg.textContent='Backup pronto.'}
-    catch(e){msg.textContent=e&&e.code==='declined'?'Download cancelado.':'Não consegui gerar o arquivo agora. Tente de novo em instantes.'}
+      await dl.save({filename:name,data});okBackup();msg&&(msg.textContent='Backup pronto.')}
+    catch(e){msg&&(msg.textContent=e&&e.code==='declined'?'Download cancelado.':'Não consegui gerar o arquivo agora. Tente de novo em instantes.')}
     return}
   // App instalado ou navegador: abre o menu de compartilhar do celular; se não houver, baixa o arquivo.
   try{const f=new File([data],name,{type:'application/json'});
-    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Backup do treino'});msg.textContent='Backup compartilhado.';return}}
-  catch(e){if(e&&e.name==='AbortError'){msg.textContent='Compartilhamento cancelado.';return}}
-  try{const u=URL.createObjectURL(new Blob([data],{type:'application/json'})),l=document.createElement('a');l.href=u;l.download=name;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);msg.textContent='Arquivo salvo em Downloads.'}
-  catch(e){msg.textContent='Não consegui gerar o arquivo.'}
+    if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:'Backup do treino'});okBackup();msg&&(msg.textContent='Backup compartilhado.');return}}
+  catch(e){if(e&&e.name==='AbortError'){msg&&(msg.textContent='Compartilhamento cancelado.');return}}
+  try{const u=URL.createObjectURL(new Blob([data],{type:'application/json'})),l=document.createElement('a');l.href=u;l.download=name;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);okBackup();msg&&(msg.textContent='Arquivo salvo em Downloads.')}
+  catch(e){msg&&(msg.textContent='Não consegui gerar o arquivo.')}
 }
 document.addEventListener('change',e=>{if(e.target.id!=='importFile')return;const f=e.target.files&&e.target.files[0];if(!f)return;
   const rd=new FileReader();rd.onload=()=>{const msg=$('bkMsg');try{const o=JSON.parse(rd.result);if(o.app!=='treino-abcd'||typeof o.exlog!=='object')throw 0;
-    S.exlog=o.exlog;S.hist=Array.isArray(o.hist)?o.hist:[];S.varCount=o.varCount&&typeof o.varCount==='object'?o.varCount:{};if(o.stallN)S.stallN=+o.stallN;touch();render();$('bkMsg').textContent='Backup restaurado.'}catch(_){msg&&(msg.textContent='Esse arquivo não é um backup deste app.')}};rd.readAsText(f)});
+    applySync(o);S.hist=Array.isArray(S.hist)?S.hist:[];if(o.stallN)S.stallN=+o.stallN;touch();render();$('bkMsg').textContent='Backup restaurado.'}catch(_){msg&&(msg.textContent='Esse arquivo não é um backup deste app.')}};rd.readAsText(f)});
 
+// ---- checklist de proteína ----
+const PROT=['Ovos no café','Frango ou carne no almoço','Proteína no jantar (ovo, sardinha, atum, frango)','Lanche com proteína (leite, iogurte, ovo, amendoim)'];
+function protWeek(){const mon=monday(today());let ok=0,days=0;for(let k=0;k<7;k++){const s=addD(mon,k);if(s>today())break;days++;const a=S.prot[s];if(a&&a.reduce((x,y)=>x+y,0)>=3)ok++}return [ok,days]}
+function protHTML(){const a=S.prot[today()]||[0,0,0,0],n=a.reduce((x,y)=>x+y,0),[ok,days]=protWeek();
+  return `<div class="note" id="protBox"><h3>Proteína de hoje</h3><div class="chk4">${PROT.map((t,k)=>`<button type="button" class="pchk${a[k]?' on':''}" data-act="prot" data-k="${k}" aria-pressed="${!!a[k]}"><span>${a[k]?'✓':''}</span>${t}</button>`).join('')}</div>
+  <p class="flag" style="margin-top:8px">${n>=3?'<b>Meta de hoje batida.</b> ':`Faltam ${3-n} para a meta de hoje (3 de 4). `}Nesta semana: meta batida em ${ok} de ${days} dia${days>1?'s':''}. É uma referência simples, não um cálculo exato de proteína.</p></div>`}
+function renderProt(){const el=$('protBox');if(el)el.outerHTML=protHTML()}
+
+// ---- peso corporal ----
+// Ritmo pela reta dos registros das últimas 4 semanas (kg por semana).
+function bwRate(){const L=S.bw.filter(x=>x.date>=addD(today(),-35));if(L.length<2)return null;const span=diffD(L[0].date,L[L.length-1].date);if(span<7)return null;
+  const xs=L.map(x=>diffD(L[0].date,x.date)),ys=L.map(x=>+x.kg),mx=xs.reduce((a,b)=>a+b,0)/xs.length,my=ys.reduce((a,b)=>a+b,0)/ys.length;
+  let nu=0,de=0;xs.forEach((x,k)=>{nu+=(x-mx)*(ys[k]-my);de+=(x-mx)*(x-mx)});return {rate:de?nu/de*7:0,span}}
+function bwAdvice(){const r=bwRate();if(!r)return ['','Registre pelo menos 2 pesagens com 1 semana de diferença para o app calcular o ritmo.'];
+  const v=r.rate.toLocaleString('pt-BR',{maximumFractionDigits:2,signDisplay:'always'});
+  if(r.rate>0.5)return ['down',`Ganhando ${v} kg por semana: rápido demais, a tendência é acumular mais gordura. Reduza os beliscos (bolachas) e mantenha a proteína.`];
+  if(r.rate<0.25){if(r.span<21)return ['',`Ritmo atual: ${v} kg por semana. Ainda cedo para concluir; o app avalia com 3 semanas de registros.`];
+    return ['down',`Ganhando ${v} kg por semana há ${Math.round(r.span/7)} semanas: devagar demais para crescer. Acrescente um lanche por dia (ex.: banana com leite ou 2 ovos).`]}
+  return ['up',`Ganhando ${v} kg por semana: no ritmo certo (0,25 a 0,5 kg por semana).`]}
+function bwHTML(){const L=S.bw.slice(-6).reverse(),[lv,t]=bwAdvice();
+  return `<div class="note"><h3>Peso corporal</h3><p class="flag">Toda segunda de manhã, em jejum, depois de ir ao banheiro. Referência de ganho para massa com pouca gordura: 0,25 a 0,5 kg por semana (faixa usual, não um valor exato para você).</p>
+  <div class="bwrow"><input type="text" inputmode="decimal" id="bwInput" placeholder="kg" aria-label="Peso em kg"><input type="date" id="bwDate" value="${today()}" max="${today()}" aria-label="Data da pesagem"><button type="button" class="prim" data-act="bwsave" data-src="bwInput">Salvar</button></div>
+  <div class="ev ${lv}" style="margin-top:8px">${t}</div>
+  ${L.length?`<div class="tw"><table><thead><tr><th>Data</th><th>Peso</th><th></th></tr></thead><tbody>${L.map(x=>`<tr><td>${br(x.date)}/${x.date.slice(2,4)}</td><td>${kg(x.kg)} kg</td><td><button type="button" class="linkbtn" data-act="bwdel" data-date="${x.date}">apagar</button></td></tr>`).join('')}</tbody></table></div>`:''}</div>`}
+
+// ---- horário de treino e lembretes na agenda ----
+const REM={
+ treino:{name:'Treino A/B – academia',days:'MO,TU,WE,TH,FR',at:()=>S.win&&S.win.a,end:()=>S.win&&S.win.b,desc:'Hora do treino. Abra o app Treino A/B.'},
+ peso:{name:'Pesagem – Treino A/B',days:'MO',at:()=>S.wakeAt,end:()=>{const m=mins(S.wakeAt)+10;return String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0')},desc:'Pese-se em jejum, depois de ir ao banheiro. À tarde, anote o peso no app.'}};
+// Próximo dia válido (a partir de hoje) para começar a repetição.
+function firstDate(days,at){const map={SU:0,MO:1,TU:2,WE:3,TH:4,FR:5,SA:6},ok=days.split(',').map(x=>map[x]),t=new Date();
+  for(let k=0;k<8;k++){const c=new Date(t.getFullYear(),t.getMonth(),t.getDate()+k);const [h,m]=at.split(':').map(Number);c.setHours(h,m,0,0);if(ok.includes(c.getDay())&&c>t)return c}return t}
+const stamp=(c,hm)=>{const [h,m]=hm.split(':');return c.getFullYear()+String(c.getMonth()+1).padStart(2,'0')+String(c.getDate()).padStart(2,'0')+'T'+h+m+'00'};
+function gcalLink(k){const r=REM[k],at=r.at(),en=r.end();if(!HM.test(at||'')||!HM.test(en||''))return '';const c=firstDate(r.days,at);
+  return 'https://calendar.google.com/calendar/render?action=TEMPLATE&text='+encodeURIComponent(r.name)+'&dates='+stamp(c,at)+'/'+stamp(c,en)+'&ctz=America/Sao_Paulo&details='+encodeURIComponent(r.desc)+'&recur='+encodeURIComponent('RRULE:FREQ=WEEKLY;BYDAY='+r.days)}
+function icsText(k){const r=REM[k],at=r.at(),en=r.end(),c=firstDate(r.days,at);
+  return ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Treino AB//PT','BEGIN:VEVENT','UID:treino-ab-'+k+'@app','DTSTAMP:'+stamp(new Date(),'00:00'),'DTSTART:'+stamp(c,at),'DTEND:'+stamp(c,en),'RRULE:FREQ=WEEKLY;BYDAY='+r.days,'SUMMARY:'+r.name,'DESCRIPTION:'+r.desc,'BEGIN:VALARM','ACTION:DISPLAY','DESCRIPTION:'+r.name,'TRIGGER:PT0M','END:VALARM','END:VEVENT','END:VCALENDAR'].join('\r\n')}
+async function shareICS(k){const name=(k==='treino'?'lembrete-treino':'lembrete-pesagem')+'.ics',data=icsText(k),msg=$('remMsg-'+k);
+  try{const f=new File([data],name,{type:'text/calendar'});if(navigator.canShare&&navigator.canShare({files:[f]})){await navigator.share({files:[f],title:REM[k].name});return}}catch(e){if(e&&e.name==='AbortError')return}
+  try{const u=URL.createObjectURL(new Blob([data],{type:'text/calendar'})),l=document.createElement('a');l.href=u;l.download=name;document.body.appendChild(l);l.click();l.remove();setTimeout(()=>URL.revokeObjectURL(u),5000);msg&&(msg.textContent='Arquivo salvo em Downloads. Abra com a sua agenda.')}catch(e){msg&&(msg.textContent='Não consegui gerar o arquivo.')}}
+function remBlock(k){const r=REM[k],on=!!(S.rem[k]&&S.rem[k].on),saved=S.rem[k]&&S.rem[k].at,cur=r.at(),valid=HM.test(cur||'');
+  let h=`<div class="remrow"><label class="tog"><input type="checkbox" data-rem="${k}" ${on?'checked':''}><span></span>${k==='treino'?'Lembrete do treino (segunda a sexta, no início do horário)':'Lembrete da pesagem (segunda de manhã)'}</label>`;
+  if(on){
+    if(!valid)h+=`<p class="flag">Preencha o horário acima para criar o lembrete.</p>`;
+    else{if(saved&&saved!==cur)h+=`<div class="ev down">O lembrete na agenda ainda está às ${saved}. Apague o antigo ("${r.name}") e crie o novo às ${cur}.</div>`;
+      h+=`<div class="actions" style="margin-top:6px"><a class="prim" href="${gcalLink(k)}" target="_blank" rel="noopener" data-remmade="${k}">Criar na Google Agenda ↗</a>${inClaude()?'':`<button type="button" class="ghostbtn" data-act="remics" data-k="${k}">Arquivo para outra agenda</button>`}</div>
+      <p class="flag" id="remMsg-${k}">Precisa de internet só para criar. A Google Agenda costuma usar o aviso padrão dela (geralmente 30 min antes); ao salvar, mude a notificação para "No horário do evento".</p>`}
+  }else if(saved)h+=`<div class="ev">Desligado no app. Para parar de receber, apague na agenda: abra o evento "<b>${r.name}</b>", toque em ⋮ (ou na lixeira), Excluir, "Todos os eventos". <button type="button" class="linkbtn" data-act="remclear" data-k="${k}">Já apaguei</button></div>`;
+  return h+'</div>'}
+function remHTML(){const w=S.win||{a:'',b:''};
+  return `<div class="note" id="remBox"><h3>Horário e lembretes</h3>
+  <div class="basew"><span>Horário do treino (24h)</span><span class="hm"><input type="text" inputmode="numeric" maxlength="5" placeholder="16:08" id="winA" data-hm="a" value="${w.a||''}" aria-label="Início do treino"> às <input type="text" inputmode="numeric" maxlength="5" placeholder="17:03" id="winB" data-hm="b" value="${w.b||''}" aria-label="Fim do treino"></span></div>
+  <p class="flag">Os avisos do app (pesagem, dia de treino, semana leve, backup) aparecem dentro desse horário. ${S.win&&HM.test(S.win.a||'')&&HM.test(S.win.b||'')?'':'Enquanto não preencher, eles aparecem a qualquer hora.'}</p>
+  <div class="basew" style="margin-top:8px"><span>Horário da pesagem (24h)</span><span class="hm"><input type="text" inputmode="numeric" maxlength="5" placeholder="06:30" id="wakeAt" data-hm="w" value="${S.wakeAt||''}" aria-label="Horário da pesagem"></span></div>
+  <p class="flag">Um app instalado pelo navegador não consegue avisar com ele fechado. Para isso, ligue os lembretes abaixo: eles ficam na agenda do celular, que avisa mesmo sem internet.</p>
+  ${remBlock('treino')}${remBlock('peso')}</div>`}
+// Digita 1608 → 16:08
+document.addEventListener('input',e=>{const t=e.target;if(!t.dataset||!t.dataset.hm)return;let v=t.value.replace(/\D/g,'').slice(0,4);if(v.length>2)v=v.slice(0,2)+':'+v.slice(2);t.value=v});
+document.addEventListener('change',e=>{const t=e.target;
+  if(t.dataset&&t.dataset.hm){const v=t.value;if(v&&!HM.test(v)){t.setCustomValidity('Use o formato 00:00');t.reportValidity&&t.reportValidity();return}t.setCustomValidity('');
+    if(t.dataset.hm==='w')S.wakeAt=v;else{S.win=S.win||{a:'',b:''};S.win[t.dataset.hm]=v}touch();setTimeout(()=>{const y=window.scrollY;render();window.scrollTo(0,y)},0);return}
+  if(t.dataset&&t.dataset.rem){const k=t.dataset.rem;S.rem[k]=S.rem[k]||{};S.rem[k].on=t.checked;touch();setTimeout(()=>{const y=window.scrollY;render();window.scrollTo(0,y)},0)}});
+document.addEventListener('click',e=>{const a=e.target.closest('a[data-remmade]');if(!a)return;const k=a.dataset.remmade;S.rem[k]=S.rem[k]||{};S.rem[k].on=true;S.rem[k].at=REM[k].at();touch();setTimeout(()=>{const y=window.scrollY;render();window.scrollTo(0,y)},300)});
+
+autoClose();
 render();
+// Ao voltar para o app num novo dia, fecha treino esquecido e atualiza os avisos.
+let _day=today();document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&today()!==_day){_day=today();autoClose();render()}});
 
 if('serviceWorker' in navigator){window.addEventListener('load',()=>{navigator.serviceWorker.register('sw.js').catch(()=>{})})}
 </script>
