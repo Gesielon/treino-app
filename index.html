@@ -187,6 +187,10 @@ a.prim{text-decoration:none;display:inline-block}
 .pcard .pn{font-size:.78rem;font-weight:700;text-align:center;line-height:1.2;text-wrap:balance}
 .pcard .pr{font-size:.66rem;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
 .pcard.best{border:3px solid var(--accent);background:var(--accent-soft)} .pcard.best .ord{color:var(--accent)}
+.cfig .fl2{color:#3d3d3d}
+.figopts{display:flex;flex-wrap:wrap;gap:12px}
+.figopts .flag{display:block;margin-bottom:4px;font-weight:600}
+.figprev{max-width:220px;margin-top:8px}
 /* cronômetro */
 .trem{max-width:720px;margin:0 auto 6px;font-size:.8rem;font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums;min-height:1.2em}
 .trem.late{color:var(--over)}
@@ -582,6 +586,92 @@ EX.barraNeg={...EX.barraFixa,n:'Negativa na Barra',q:'barra fixa negativa excên
   arr:[A(146,40,146,96)],
   t:['Suba com um pulo ou apoiado numa cadeira até o queixo passar da barra.','Desça devagar, contando 3 a 5 segundos, até esticar os braços.','É o caminho para conseguir fazer a barra completa. Conte cada descida como 1 repetição.']};
 EX.flexao.easy='Flexão com Joelhos (apoie os joelhos no chão)';
+
+// ---- personagem (estilos Chibi e Flat) a partir das poses dos desenhos ----
+// Cada pose tem: cabeça (h), linhas do corpo (L) e acessórios (x). O app descobre sozinho
+// qual linha é tronco, perna e braço e veste a personagem (camiseta, calça ou saia, tênis).
+const MUS={};
+[['legs','legpress legpressAlto hack goblet afundo stiff flexora extensora ponte agachLivre pant pantDegrau adutora abdutora'],
+ ['chest','supMaq supino supHal supinc peck cruciHal flexao'],
+ ['back','pulley pulleySup serrote remada cavalinho remCurvHal barraFixa barraSup barraNeg remMochila'],
+ ['shoulders','desenv desenvHal arnold elev elevCabo elevSent crucinv facepull crucInvHal encolh'],
+ ['bi','rosca roscaAlt roscaHal martelo'],['tri','tricorda tripulley triFrances triTesta'],
+ ['core','abd abCabo abdChao elevPerna prancha']].forEach(([g,ks])=>ks.split(' ').forEach(k=>MUS[k]=g));
+const dist=(a,b)=>Math.hypot(a[0]-b[0],a[1]-b[1]);
+function classify(pose){
+  const L=pose.L,h=pose.h,role=L.map(()=>'arm');let torso=-1,best=1e9;
+  // tronco: linha que começa perto da cabeça e termina onde começam outras linhas (quadril)
+  let flip=false;
+  L.forEach((ln,k)=>{if(ln.length!==2)return;[[ln[0],ln[1],false],[ln[1],ln[0],true]].forEach(([s,e,fl])=>{const d=dist(s,h);
+    const feeds=L.filter((o,j)=>j!==k&&dist(o[0],e)<9).length;
+    if(feeds>=1&&dist(e,h)>dist(s,h)&&dist(s,e)>18&&d<best){best=d;torso=k;flip=fl}})});
+  if(torso<0)return {role,torso:-1};
+  role[torso]='torso';const ts=flip?L[torso][1]:L[torso][0],te=flip?L[torso][0]:L[torso][1];
+  L.forEach((ln,k)=>{if(k===torso)return;
+    const mid=[(ln[0][0]+ln[ln.length-1][0])/2,(ln[0][1]+ln[ln.length-1][1])/2];
+    if(ln.length===2&&dist(mid,ts)<7&&dist(ln[0],ln[1])<40)role[k]='shoulders';
+    else if(ln.length===2&&dist(mid,te)<7&&dist(ln[0],ln[1])<24)role[k]='hips';
+    else if(dist(ln[0],te)<9)role[k]='leg';
+    else role[k]='arm'});
+  return {role,torso,flip};
+}
+const lerpP=(a,b,t)=>[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+function poseAt(e,t){const A=e.a,B=e.b;if(!A)return {h:B.h,L:B.L};
+  if(A.L.length!==B.L.length||A.L.some((l,k)=>l.length!==B.L[k].length))return t<.5?A:B;
+  return {h:lerpP(A.h,B.h,t),L:A.L.map((l,k)=>l.map((p,j)=>lerpP(p,B.L[k][j],t)))}}
+const CPAL={skin:'#b97a55',skinSh:'#9a6243',hair:'#24160f',tee:'#1d1d21',pants:'#2f3644',skirt:'#c3a2e0',shoe:'#eeeef3',out:'#2a1a1a'};
+function figSVG(k,anim,t){
+  const st=S.figStyle||'chibi';
+  if(st==='line'||!EX[k]||!EX[k].b)return svg(k);
+  if(t===undefined)t=1;
+  const e=EX[k],pose=poseAt(e,t),cls=classify(e.b),chibi=st==='chibi',sk=S.outfit==='saia';
+  const ol=chibi?CPAL.out:null;
+  let s='';
+  const pl=(pts,w,col)=>{const d=pts.map(p=>p.join(',')).join(' ');
+    return (ol?`<polyline points="${d}" fill="none" stroke="${ol}" stroke-width="${w+1.8}" stroke-linecap="round" stroke-linejoin="round"/>`:'')+`<polyline points="${d}" fill="none" stroke="${col}" stroke-width="${w}" stroke-linecap="round" stroke-linejoin="round"/>`};
+  const W=chibi?1.15:1;
+  // ordem: pernas e braços de trás, tronco, braços da frente
+  const legs=[],arms=[],torso=[],extra=[];
+  pose.L.forEach((ln,j)=>{const r=cls.role[j]||'arm';
+    if(r==='leg'){const last=ln.length>=3&&dist(ln[ln.length-1],ln[ln.length-2])<15;const body=last?ln.slice(0,-1):ln;
+      if(sk){legs.push(pl(body.slice(0,2),11*W,CPAL.skirt));if(body.length>2)legs.push(pl(body.slice(1),6*W,CPAL.skin))}else legs.push(pl(body,8.5*W,CPAL.pants));
+      if(last)legs.push(pl(ln.slice(-2),6*W,CPAL.shoe))}
+    else if(r==='hips')torso.push(pl(ln,9*W,sk?CPAL.skirt:CPAL.pants));
+    else if(r==='torso')torso.push(pl(ln,15*W,CPAL.tee));
+    else if(r==='shoulders')torso.push(pl(ln,10*W,CPAL.tee));
+    else{const sl=ln.length>=2?[ln[0],lerpP(ln[0],ln[1],.45)]:ln;arms.push(pl(ln,6.5*W,CPAL.skin)+pl(sl,8.5*W,CPAL.tee))}});
+  // músculo trabalhado acendendo
+  const g=MUS[k],glow=.25+.7*t;let hot='';
+  const spot=(p,r)=>{hot+=`<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="${r}" fill="#ff3b3b" opacity="${glow.toFixed(2)}" filter="url(#hotb)"/>`};
+  const T=cls.torso>=0?(cls.flip?[...pose.L[cls.torso]].reverse():pose.L[cls.torso]):null;
+  if(g==='legs'){pose.L.forEach((ln,j)=>{if(cls.role[j]==='leg')spot(lerpP(ln[0],ln[1]||ln[0],.5),4.5)})}
+  else if((g==='chest'||g==='back'||g==='core')&&T)spot(lerpP(T[0],T[1],g==='core'?.7:.28),6);
+  else if(g==='shoulders'&&T)spot(T[0],5);
+  else if(g==='bi'||g==='tri'){pose.L.forEach((ln,j)=>{if(cls.role[j]==='arm'&&ln.length>=2)spot(lerpP(ln[0],ln[1],.55),3.6)})}
+  // cabeça: rosto de frente, cabelo cacheado e óculos gatinho
+  const [hx,hy]=pose.h,R=chibi?15:9.5,f=R/9.5;
+  const curls=[];for(let a=0;a<12;a++){const an=Math.PI*(.95+a*.1);curls.push(`<circle cx="${(hx+Math.cos(an)*R*1.08).toFixed(1)}" cy="${(hy+Math.sin(an)*R*1.02+R*.15).toFixed(1)}" r="${(R*.36).toFixed(1)}" fill="${CPAL.hair}"/>`)}
+  [[-1.05,.5],[-1.12,.95],[1.05,.5],[1.12,.95],[-1,1.35],[1,1.35]].forEach(([dx,dy])=>curls.push(`<circle cx="${(hx+dx*R).toFixed(1)}" cy="${(hy+dy*R).toFixed(1)}" r="${(R*.34).toFixed(1)}" fill="${CPAL.hair}"/>`));
+  const eyeY=hy+R*.08,ex1=hx-R*.38,ex2=hx+R*.38,ew=R*.3;
+  const lens=(x,dir)=>`<path d="M${x-dir*ew*1.25},${eyeY-ew*.55} L${x+dir*ew*1.15},${eyeY-ew*.75} Q${x+dir*ew*1.7},${eyeY-ew*1.2} ${x+dir*ew*1.55},${eyeY-ew*.3} Q${x+dir*ew*1.3},${eyeY+ew*1.2} ${x},${eyeY+ew*1.25} Q${x-dir*ew*1.3},${eyeY+ew*1.2} ${x-dir*ew*1.25},${eyeY-ew*.55}Z" fill="rgba(200,190,255,.2)" stroke="#2a1a10" stroke-width="${(.9*f).toFixed(2)}"/>`;
+  const eye=x=>chibi?`<ellipse cx="${x}" cy="${eyeY}" rx="${ew*.62}" ry="${ew*(.85-.35*t)}" fill="#2b1a12"/><circle cx="${x+ew*.22}" cy="${eyeY-ew*.3}" r="${ew*.24}" fill="#fff"/>`:`<path d="M${x-ew*.6},${eyeY+ew*.1} Q${x},${eyeY-ew*.6} ${x+ew*.6},${eyeY+ew*.1}" fill="none" stroke="#2a1810" stroke-width="${(.9*f).toFixed(2)}" stroke-linecap="round"/>`;
+  const mouth=t>.6?`<path d="M${hx-R*.2},${hy+R*.55} L${hx+R*.2},${hy+R*.55}" stroke="#7a3b2e" stroke-width="${(.9*f).toFixed(2)}" stroke-linecap="round"/>`:`<path d="M${hx-R*.22},${hy+R*.45} Q${hx},${hy+R*.68} ${hx+R*.22},${hy+R*.45}" fill="none" stroke="#7a3b2e" stroke-width="${(.9*f).toFixed(2)}" stroke-linecap="round"/>`;
+  const head=`${curls.join('')}<ellipse cx="${hx}" cy="${hy+R*.12}" rx="${R*.86}" ry="${R*.98}" fill="${CPAL.skin}"${ol?` stroke="${ol}" stroke-width="1"`:''}/>
+   <path d="M${hx-R*.9},${hy+R*.05} Q${hx-R*.95},${hy-R*1.25} ${hx},${hy-R*1.2} Q${hx+R*.95},${hy-R*1.25} ${hx+R*.9},${hy+R*.05} Q${hx+R*.7},${hy-R*.6} ${hx},${hy-R*.62} Q${hx-R*.7},${hy-R*.6} ${hx-R*.9},${hy+R*.05}Z" fill="${CPAL.hair}"/>
+   ${eye(ex1)}${eye(ex2)}${lens(ex1,-1)}${lens(ex2,1)}<path d="M${ex1+ew*1.2},${eyeY-ew*.3} Q${hx},${eyeY-ew*.75} ${ex2-ew*1.2},${eyeY-ew*.3}" fill="none" stroke="#2a1a10" stroke-width="${(.8*f).toFixed(2)}"/>
+   ${chibi?`<ellipse cx="${hx-R*.55}" cy="${hy+R*.45}" rx="${R*.17}" ry="${R*.1}" fill="rgba(235,110,120,.45)"/><ellipse cx="${hx+R*.55}" cy="${hy+R*.45}" rx="${R*.17}" ry="${R*.1}" fill="rgba(235,110,120,.45)"/>`:''}${mouth}`;
+  // acessórios (halteres, barra, alças): mistura da posição inicial e final
+  const ax=e.a&&e.a.x?`<g class="fl2" opacity="${(1-t).toFixed(2)}">${e.a.x}</g>`:'';const bx=e.b.x?`<g class="fl2" opacity="${(e.a?t:1).toFixed(2)}">${e.b.x}</g>`:'';
+  const arr=(e.arr||[]).map(d=>`<path d="${d}" class="arr" opacity=".45"/>`).join('');
+  return `<svg class="fig cfig" viewBox="-6 -16 212 170" role="img" aria-label="Desenho: ${e.n}" ${anim?`data-anim="${k}"`:''}><defs><filter id="hotb" x="-1" y="-1" width="3" height="3"><feGaussianBlur stdDeviation="1.6"/></filter></defs><rect x="-6" y="-16" width="212" height="170" rx="10" fill="#e9f2ed"/>${e.eq||''}${arr}<g>${legs.join('')}${torso.join('')}${arms.join('')}</g><g opacity=".95">${hot}</g>${ax}${bx}<g>${head}</g></svg>`;
+}
+// Anima só o exercício atual (cerca de 30 quadros por segundo; para quando a tela fica oculta)
+let _an=0;const _rm=matchMedia('(prefers-reduced-motion: reduce)');
+function animLoop(ms){requestAnimationFrame(animLoop);if(ms-_an<33||document.visibilityState!=='visible')return;_an=ms;
+  const el=document.querySelector('svg[data-anim]');if(!el)return;const k=el.getAttribute('data-anim');
+  const t=_rm.matches?.6:phase(ms);const tmp=document.createElement('div');tmp.innerHTML=figSVG(k,true,t);el.replaceWith(tmp.firstElementChild)}
+function phase(ms){const e=x=>x<.5?2*x*x:1-Math.pow(-2*x+2,2)/2,T=3000,x=(ms%T)/T;if(x<.33)return e(x/.33);if(x<.43)return 1;if(x<.93)return 1-e((x-.43)/.5);return 0}
+requestAnimationFrame(animLoop);
 // ---- treinos ----
 // Alternativas para quando o aparelho estiver ocupado (a 1ª da lista do cartão é a principal)
 const ALT={legpress:['hack','legpressAlto','goblet'],stiff:['flexora','legpressAlto','ponte'],
@@ -646,7 +736,7 @@ function estMin(d){const pl=planOf(d);let t=d.kind==='gym'?300:0;d.items.forEach
 
 // ---- estado (salvo só neste aparelho) ----
 const KEY='treino-abcd-v2';
-let S={prog:{},hist:[],exlog:{},varCount:{},order:{},debt:null,off:[],bw:[],deload:null,deloadSnooze:'',stallReset:'',win:null,wakeAt:'06:30',rem:{},lastBackup:'',firstUse:'',prot:{},sound:true,timer:null,view:null,updatedAt:0,ver:4};
+let S={prog:{},hist:[],exlog:{},varCount:{},order:{},debt:null,off:[],bw:[],deload:null,deloadSnooze:'',stallReset:'',win:null,wakeAt:'06:30',rem:{},lastBackup:'',firstUse:'',prot:{},figStyle:'chibi',outfit:'calca',sound:true,timer:null,view:null,updatedAt:0,ver:4};
 try{const v=JSON.parse(localStorage.getItem(KEY)||'null');if(v&&typeof v==='object')S=Object.assign(S,v)}catch(e){}
 S.exlog=S.exlog||{};S.varCount=S.varCount||{};S.order=S.order||{};S.off=S.off||[];S.bw=S.bw||[];S.rem=S.rem||{};S.prot=S.prot||{};if(!S.firstUse)S.firstUse=new Date().toISOString().slice(0,10);
 // Treinos mudaram nesta versão: descarta treino em andamento da versão antiga (histórico fica).
@@ -876,7 +966,7 @@ function rankNext(d){
 function pickHTML(d){
   const p=P_(d.id);if(!p.awaitPick)return '';const r=rankNext(d).slice(0,3);if(!r.length)return '';
   return `<div class="pick" id="pickBox"><div class="pickhead"><b>${r.length>1?'Escolha o próximo':'Último exercício'}</b><span class="bigt" id="bigT"></span></div>
-  <div class="pickrow">${r.map((i,k)=>`<button type="button" class="pcard${k===0?' best':''}" data-act="pick" data-i="${i}"><span class="ord">${k+1}°</span>${svg(exKey(d,i))}<span class="pn">${EX[exKey(d,i)].n}</span>${k===0?'<span class="pr">mais recomendado</span>':''}</button>`).join('')}</div></div>`;
+  <div class="pickrow">${r.map((i,k)=>`<button type="button" class="pcard${k===0?' best':''}" data-act="pick" data-i="${i}"><span class="ord">${k+1}°</span>${figSVG(exKey(d,i),false)}<span class="pn">${EX[exKey(d,i)].n}</span>${k===0?'<span class="pr">mais recomendado</span>':''}</button>`).join('')}</div></div>`;
 }
 // Rola até o elemento depois que a tela termina de se desenhar (os cartões fora da tela só são desenhados ao chegar perto).
 function scrollToEl(id){let k=0;const go=()=>{const el=$(id);if(!el)return;el.scrollIntoView({block:'start'});if(++k<4)requestAnimationFrame(go)};requestAnimationFrame(go)}
@@ -958,7 +1048,7 @@ function card(d,i){
     h+=`<div class="crow"><button type="button" class="linkbtn" data-act="set" data-i="${i}" data-s="${it.sets-1}">Desfazer última série</button></div>`;
     return h+'</article>';
   }
-  h+=cur&&!p.awaitPick?`<div class="figrow">${svg(key)}<span class="bigt" id="bigT"></span></div>`:svg(key);
+  h+=cur&&!p.awaitPick?`<div class="figrow">${figSVG(key,true,.6)}<span class="bigt" id="bigT"></span></div>`:figSVG(key,false);
   const adv=!n?advise(d,i):null;
   if(adv)h+=`<div class="ev swap"><b>↻ Troque hoje.</b> ${adv.why}<div class="swaps">${adv.to.map((k,j)=>`<button type="button" class="vbtn" data-act="swap" data-i="${i}" data-k="${k}">${j===0?'<b>Melhor:</b> ':''}${EX[k].n}</button>`).join('')}</div></div>`;
   if(opts.length>1)h+=`<label class="varsel"><span>Aparelho ocupado? Trocar por:</span><select data-act="var" data-i="${i}" id="var-${d.id}-${i}" ${n?'disabled title="Já começou este exercício"':''}>${opts.map((o,j)=>`<option value="${o}" ${o===key?'selected':''}>${EX[o].n}${o===pref?' ★ preferido':''}${adv&&adv.to.includes(o)?' ↻ sugerido hoje':''}</option>`).join('')}</select></label>`;
@@ -1027,6 +1117,7 @@ function guideHTML(){
   const days=[['Seg','A/B',1],['Ter','A/B',1],['Qua','A/B',1],['Qui','A/B',1],['Sex','A/B',1],['Sáb','Casa + bike',0],['Dom','Descanso',0]];
   return `<section class="list"><div class="dayhead"><div><h2>Guia</h2><p>${last?`Último treino: ${last.d} em ${br(last.date)} · `:''}Próximo: ${nextGym()}</p></div></div>
   ${notices('G')}
+  ${figPickHTML()}
   ${protHTML()}
   ${bwHTML()}
   ${evoHTML()}
@@ -1149,6 +1240,8 @@ content.addEventListener('click',e=>{
   if(act==='deloadno'){S.deloadSnooze=addD(today(),7);touch();render();return}
   if(act==='deloadstop'){S.deload=null;touch();render();return}
   if(act==='prot'){const t=today(),k=+b.dataset.k,a2=(S.prot[t]=S.prot[t]||[0,0,0,0]);a2[k]=a2[k]?0:1;const ks=Object.keys(S.prot).sort();if(ks.length>60)delete S.prot[ks[0]];touch();renderProt();return}
+  if(act==='figst'){S.figStyle=b.dataset.v;touch();render();return}
+  if(act==='outfit'){S.outfit=b.dataset.v;touch();render();return}
   if(act==='remics'){shareICS(b.dataset.k);return}
   if(act==='remclear'){delete S.rem[b.dataset.k];touch();render();return}
   if(act==='stall+'||act==='stall-'){S.stallN=STALL()+(act==='stall+'?1:-1);S.stallN=STALL();touch();render();return}
@@ -1175,7 +1268,7 @@ content.addEventListener('change',e=>{
 content.addEventListener('focusin',e=>{if(e.target.matches('input[data-act]'))setTimeout(()=>{try{e.target.select()}catch(_){}},0)});
 // ---- conta Claude (histórico) e backup em arquivo ----
 let DB=null,DOC=null,syncState='off',syncAt=0,syncT=null;
-const SYNC=['exlog','hist','varCount','order','debt','off','bw','deload','deloadSnooze','stallReset','win','wakeAt','rem','lastBackup','firstUse','prot','stallN'];
+const SYNC=['figStyle','outfit','exlog','hist','varCount','order','debt','off','bw','deload','deloadSnooze','stallReset','win','wakeAt','rem','lastBackup','firstUse','prot','stallN'];
 const pickSync=()=>{const o={};SYNC.forEach(k=>o[k]=S[k]);return o};
 function applySync(o){SYNC.forEach(k=>{if(o[k]!==undefined)S[k]=o[k]});S.exlog=S.exlog||{};S.hist=S.hist||[];S.varCount=S.varCount||{};S.order=S.order||{};S.off=S.off||[];S.bw=S.bw||[];S.rem=S.rem||{};S.prot=S.prot||{}}
 function syncText(){if(!inClaude())return 'Salvo neste celular.';return syncState==='ok'?`Salvo na sua conta ✓${syncAt?' · '+new Date(syncAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}):''}`:syncState==='saving'?'Salvando na sua conta…':syncState==='err'?'Não consegui salvar na conta agora. Seus dados continuam neste celular; baixe um backup.':'Salvo neste celular. A cópia na conta não está disponível agora.'}
@@ -1214,6 +1307,15 @@ async function exportFile(){
 document.addEventListener('change',e=>{if(e.target.id!=='importFile')return;const f=e.target.files&&e.target.files[0];if(!f)return;
   const rd=new FileReader();rd.onload=()=>{const msg=$('bkMsg');try{const o=JSON.parse(rd.result);if(o.app!=='treino-abcd'||typeof o.exlog!=='object')throw 0;
     applySync(o);S.hist=Array.isArray(S.hist)?S.hist:[];if(o.stallN)S.stallN=+o.stallN;touch();render();$('bkMsg').textContent='Backup restaurado.'}catch(_){msg&&(msg.textContent='Esse arquivo não é um backup deste app.')}};rd.readAsText(f)});
+
+// ---- escolha do desenho ----
+function figPickHTML(){const st=S.figStyle||'chibi',o=S.outfit||'calca';
+  const opt=(v,n)=>`<button type="button" class="vbtn" data-act="figst" data-v="${v}" aria-pressed="${st===v}">${n}</button>`;
+  const ou=(v,n)=>`<button type="button" class="vbtn" data-act="outfit" data-v="${v}" aria-pressed="${o===v}">${n}</button>`;
+  return `<div class="note"><h3>Desenho dos exercícios</h3><div class="figopts"><div><span class="flag">Estilo</span><div class="varrow">${opt('chibi','Chibi')}${opt('flat','Flat moderno')}${opt('line','Traço simples')}</div></div>
+  ${st!=='line'?`<div><span class="flag">Roupa da personagem</span><div class="varrow">${ou('calca','Calça')}${ou('saia','Saia')}</div></div>`:''}</div>
+  <div class="figprev">${figSVG('rosca',false,1)}</div>
+  <p class="flag">A animação roda só no exercício que você está fazendo, e o músculo trabalhado acende em vermelho na contração.</p></div>`}
 
 // ---- checklist de proteína ----
 const PROT=['Ovos no café','Frango ou carne no almoço','Proteína no jantar (ovo, sardinha, atum, frango)','Lanche com proteína (leite, iogurte, ovo, amendoim)'];
