@@ -1,6 +1,6 @@
 // Service worker: guarda o app no celular para funcionar sem internet.
 // Ao publicar uma nova versão, mude o número abaixo para o celular baixar a atualização.
-const VERSION = 'treino-v6';
+const VERSION = 'treino-v7';
 const SHELL = ['./', 'index.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png', 'icon-maskable-512.png', 'apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
